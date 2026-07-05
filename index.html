@@ -426,7 +426,7 @@ function renderGroups(){
     row.className='cond-row';
     row.style.cssText='flex-direction:column;align-items:stretch;gap:8px';
 
-    const spOptions=[...selSPs].sort().map(sp=>{
+    const spOptions=[...allSPs].sort().map(sp=>{
       const chk=g.sps.has(sp);
       const safeSp=sp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       return `<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:12px;border-radius:6px;background:${chk?'var(--accent-bg)':' transparent'}">
