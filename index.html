@@ -622,6 +622,9 @@ function runAnalysis(){
     const spName=spNameCol?String(row[spNameCol]||'').trim():'';
     const spId  =spIdCol  ?String(row[spIdCol  ]||'').trim():'';
     if(!spName) return; // skip rows with no SP
+    // only include rows whose SP is in at least one group
+    const spInAnyGroup=groups.some(g=>g.sps.has(spName));
+    if(!spInAnyGroup) return;
 
     const empId    =idCol   ?String(row[idCol]||'').trim():'';
     const shiftId  =shiftCol?row[shiftCol]:'';
