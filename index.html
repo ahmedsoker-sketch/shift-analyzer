@@ -655,7 +655,13 @@ function runAnalysis(){
     });
     const last=data.shifts[data.shifts.length-1];
 
-    // filter: skip if last shift already ended (using start_date + end_time)
+    // check if last shift start_time is on quarter hour — if not, skip entirely
+    const lastStartStr=toHHMM(last.startT);
+    const lastStartMins=parseInt(lastStartStr.split(':')[1]||'0');
+    if(![0,15,30,45].includes(lastStartMins)){
+      totalInvalid++;
+      return;
+    }
     const nowCairo = new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
     const todayAbs2 = new Date(nowCairo.toISOString().slice(0,10)+'T00:00:00Z').getTime()/1000;
     const nowAbs2 = todayAbs2 + nowCairo.getHours()*3600 + nowCairo.getMinutes()*60;
@@ -769,16 +775,7 @@ function runAnalysis(){
       });
     }
 
-    // filter: only keep rows where start_time is on quarter-hour (:00, :15, :30, :45)
-    function isValidQuarter(timeStr){
-      if(!timeStr) return false;
-      const mins=parseInt(timeStr.split(':')[1]||'0');
-      return [0,15,30,45].includes(mins);
-    }
-    const validRows=uploadRowsForRider.filter(r=>isValidQuarter(r['start_time (local)']));
-    const invalidCount=uploadRowsForRider.length-validRows.length;
-    totalInvalid+=invalidCount;
-    uploads.push(...validRows);
+    uploads.push(...uploadRowsForRider);
 
     const addSec=totalAddedSec+addSecOnLast;
     const displayNewEnd=addSecOnLast>0?newEnd:oldEnd;
