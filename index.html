@@ -195,11 +195,14 @@ tbody tr:hover{background:var(--bg)}
           <span style="font-size:15px;font-weight:600">ملف الرفع</span>
           <div style="display:flex;gap:8px;align-items:center">
             <span class="badge badge-s" id="cnt-u"></span>
+            <button class="exp-btn" onclick="toggleAllRows()" id="toggle-all-btn">إلغاء تحديد الكل</button>
             <button class="exp-btn primary" onclick="exportUpload()">⬇ تحميل Excel</button>
           </div>
         </div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:10px" id="selected-count"></div>
         <div class="table-wrap">
           <table dir="ltr"><thead><tr>
+            <th style="width:36px"><input type="checkbox" id="check-all" checked onchange="toggleAllCheckboxes(this.checked)"></th>
             <th>shift_id</th><th>adjustment_type</th><th>employee_id</th>
             <th>starting_point_id</th><th>start_date</th><th>end_date</th>
             <th>start_time (local)</th><th>end_time (local)</th><th>shift_slots</th>
@@ -686,11 +689,12 @@ function runAnalysis(){
   const tu=document.getElementById('tbody-u');
   tu.innerHTML='';
   if(!uploads.length){
-    tu.innerHTML='<tr class="empty-r"><td colspan="9">مفيش صفوف للرفع</td></tr>';
+    tu.innerHTML='<tr class="empty-r"><td colspan="10">مفيش صفوف للرفع</td></tr>';
   } else {
-    uploads.forEach(u=>{
+    uploads.forEach((u,i)=>{
       const tr=document.createElement('tr');
       tr.innerHTML=`
+        <td><input type="checkbox" class="row-check" data-idx="${i}" checked onchange="updateSelectedCount()"></td>
         <td>${u.shift_id}</td>
         <td>UPDATE</td>
         <td>${u.employee_id}</td>
@@ -702,16 +706,36 @@ function runAnalysis(){
         <td></td>`;
       tu.appendChild(tr);
     });
+    updateSelectedCount();
   }
 
   document.getElementById('results-sec').style.display='block';
 }
 
 // ── Exports ──
+function updateSelectedCount(){
+  const checks=document.querySelectorAll('.row-check');
+  const checked=[...checks].filter(c=>c.checked).length;
+  document.getElementById('selected-count').textContent=checked+' صف محدد من '+uploads.length;
+  document.getElementById('check-all').checked=checked===checks.length;
+  document.getElementById('check-all').indeterminate=checked>0&&checked<checks.length;
+}
+function toggleAllCheckboxes(val){
+  document.querySelectorAll('.row-check').forEach(c=>c.checked=val);
+  updateSelectedCount();
+}
+function toggleAllRows(){
+  const checks=document.querySelectorAll('.row-check');
+  const allChecked=[...checks].every(c=>c.checked);
+  toggleAllCheckboxes(!allChecked);
+  document.getElementById('toggle-all-btn').textContent=allChecked?'تحديد الكل':'إلغاء تحديد الكل';
+}
 function exportUpload(){
-  if(!uploads.length)return;
+  const checks=document.querySelectorAll('.row-check');
+  const selected=uploads.filter((_,i)=>checks[i]?.checked);
+  if(!selected.length){alert('اختار صفوف الأول!');return;}
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
-  const data=[hdrs,...uploads.map(u=>hdrs.map(h=>u[h]??''))];
+  const data=[hdrs,...selected.map(u=>hdrs.map(h=>u[h]??''))];
   const ws=XLSX.utils.aoa_to_sheet(data);
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Upload');
