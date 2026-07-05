@@ -404,31 +404,57 @@ function removeGroup(idx){
   }
   renderGroups();
 }
+function toggleGroupSP(idx, sp, checked){
+  if(checked) groups[idx].sps.add(sp);
+  else groups[idx].sps.delete(sp);
+  renderGroups();
+}
+
 function renderGroups(){
   const list=document.getElementById('cond-list');
   list.innerHTML='';
-  if(groups.length===0||selSPs.size===0){
+  if(selSPs.size===0){
     list.innerHTML='<div class="no-sp-msg">اختار starting points الأول</div>';
     return;
   }
   groups.forEach((g,i)=>{
     const names=[...g.sps].sort().join(', ');
     const short=names.length>55?names.slice(0,53)+'…':names;
-    // calc avg for this group's SPs
     const avg=calcAvgForSPs(g.sps);
-    const avgStr=avg!==null?'متوسط الساعات: <b>'+fmtH(avg)+'</b>':'';
+    const avgStr=avg!==null?'متوسط الساعات: <b>'+fmtH(avg)+'</b>':''
     const row=document.createElement('div');
     row.className='cond-row';
+    row.style.cssText='flex-direction:column;align-items:stretch;gap:8px';
+
+    const spOptions=[...selSPs].sort().map(sp=>{
+      const chk=g.sps.has(sp);
+      const safeSp=sp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:12px;border-radius:6px;background:${chk?'var(--accent-bg)':' transparent'}">
+        <input type="checkbox" ${chk?'checked':''} onchange="toggleGroupSP(${i},'${safeSp}',this.checked)" style="accent-color:var(--accent)">
+        <span style="color:${chk?'var(--accent-text)':' var(--text-primary)'}">${sp}</span>
+      </label>`;
+    }).join('');
+
     row.innerHTML=`
-      <div class="cond-sp-label">Group ${i+1}<span class="cond-sp-sub" title="${names}">${short}</span>${avgStr?'<span class="cond-sp-avg">'+avgStr+'</span>':''}</div>
-      <span class="clabel">Target h</span>
-      <input class="cinput" type="number" min="1" max="24" step="0.5" value="${g.target}" onchange="groups[${i}].target=+this.value">
-      <select class="cselect" onchange="groups[${i}].strategy=this.value">
-        <option value="extend" ${g.strategy==='extend'?'selected':''}>⏩ Extend</option>
-        <option value="gaps"   ${g.strategy==='gaps'  ?'selected':''}>🔀 Fill gaps</option>
-        <option value="hybrid" ${g.strategy==='hybrid'?'selected':''}>⚡ Hybrid</option>
-      </select>
-      <button class="cx" onclick="removeGroup(${i})">✕</button>`;
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="cond-sp-label">Group ${i+1}
+          ${names?`<span class="cond-sp-sub">${short}</span>`:`<span class="cond-sp-sub" style="color:var(--warn-text)">اختار نقطة</span>`}
+          ${avgStr?`<span class="cond-sp-avg">${avgStr}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="clabel">Target h</span>
+          <input class="cinput" type="number" min="1" max="24" step="0.5" value="${g.target}" onchange="groups[${i}].target=+this.value">
+          <select class="cselect" onchange="groups[${i}].strategy=this.value">
+            <option value="extend" ${g.strategy==='extend'?'selected':''}>⏩ Extend</option>
+            <option value="gaps"   ${g.strategy==='gaps'?'selected':''}>🔀 Fill gaps</option>
+            <option value="hybrid" ${g.strategy==='hybrid'?'selected':''}>⚡ Hybrid</option>
+          </select>
+          <button class="cx" onclick="removeGroup(${i})">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--bg);border-radius:var(--radius);padding:4px;max-height:150px;overflow-y:auto">
+        ${spOptions}
+      </div>`;
     list.appendChild(row);
   });
 }
