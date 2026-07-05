@@ -145,25 +145,7 @@ tbody tr:hover{background:var(--bg)}
     </div>
   </div>
 
-  <!-- SP card -->
-  <div class="card" id="sp-card" style="display:none">
-    <div class="section-label">Starting Points</div>
-    <div class="dropdown-wrap">
-      <div class="dd-trigger" id="dd-trigger" onclick="toggleDD()">
-        <span id="dd-lbl">اختار النقط...</span>
-        <span class="dd-arrow">▼</span>
-      </div>
-      <div class="dd-menu" id="dd-menu">
-        <div class="dd-search"><input type="text" placeholder="بحث..." id="dd-q" oninput="renderDDItems()"></div>
-        <div class="dd-actions">
-          <button class="dd-act-btn" onclick="selectAll();event.stopPropagation()">تحديد الكل</button>
-          <button class="dd-act-btn" onclick="clearAll();event.stopPropagation()">إلغاء الكل</button>
-        </div>
-        <div id="dd-items"></div>
-      </div>
-    </div>
-    <div class="tags-wrap" id="tags-wrap"></div>
-  </div>
+
 
   <!-- Conditions card -->
   <div class="card" id="cond-card" style="display:none">
@@ -318,7 +300,7 @@ function initSPs(){
   renderDDItems();
   renderTags();
   updateDDLbl();
-  document.getElementById('sp-card').style.display='block';
+  
   document.getElementById('cond-card').style.display='block';
   // single group with no SPs by default
   groups=[{sps:new Set(), target:8, strategy:'extend'}];
@@ -334,6 +316,16 @@ function toggleDD(){
   t.classList.toggle('open',open);
   if(open) document.getElementById('dd-q').focus();
 }
+function filterGrpDD(idx){
+  const q=document.getElementById('grp-q-'+idx).value.toLowerCase();
+  const container=document.getElementById('grp-items-'+idx);
+  if(!container) return;
+  container.querySelectorAll('.dd-item').forEach(item=>{
+    const txt=item.textContent.toLowerCase();
+    item.style.display=txt.includes(q)?'':'none';
+  });
+}
+
 document.addEventListener('click',e=>{
   if(!e.target.closest('.dropdown-wrap')){
     document.getElementById('dd-menu').classList.remove('open');
@@ -424,6 +416,7 @@ function toggleGroupDD(idx){
   const trigger=document.getElementById('grp-tr-'+idx);
   const open=menu.classList.toggle('open');
   trigger.classList.toggle('open',open);
+  if(open){ setTimeout(()=>{ const q=document.getElementById('grp-q-'+idx); if(q) q.focus(); },50); }
 }
 
 document.addEventListener('click',e=>{
@@ -485,11 +478,12 @@ function renderGroups(){
           <span class="dd-arrow">▼</span>
         </div>
         <div class="dd-menu grp-dd-menu" id="grp-dd-${i}">
+          <div class="dd-search"><input type="text" placeholder="بحث..." id="grp-q-${i}" oninput="filterGrpDD(${i})" onclick="event.stopPropagation()"></div>
           <div class="dd-actions">
             <button class="dd-act-btn" onclick="[...allSPs].forEach(s=>toggleGroupSP(${i},s,true));event.stopPropagation()">تحديد الكل</button>
             <button class="dd-act-btn" onclick="groups[${i}].sps.clear();renderGroups();event.stopPropagation()">إلغاء الكل</button>
           </div>
-          <div>${ddItems}</div>
+          <div id="grp-items-${i}">${ddItems}</div>
         </div>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:4px">${tags||'<span style="font-size:12px;color:var(--text-muted)">لا توجد نقط محددة</span>'}</div>
@@ -591,8 +585,7 @@ function runAnalysis(){
     if(!name)return;
     const spName=spNameCol?String(row[spNameCol]||'').trim():'';
     const spId  =spIdCol  ?String(row[spIdCol  ]||'').trim():'';
-    // only include rows whose SP is selected — exact match after trim
-    if(!spName || !selSPs.has(spName))return;
+    if(!spName) return; // skip rows with no SP
 
     const empId    =idCol   ?String(row[idCol]||'').trim():'';
     const shiftId  =shiftCol?row[shiftCol]:'';
