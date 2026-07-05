@@ -390,8 +390,7 @@ function syncGroupSPs(){
 
 // ── Groups ──
 function addGroup(){
-  // new group starts with all selected SPs (user can then move SPs around by removing groups)
-  groups.push({sps:new Set([...selSPs]),target:8,strategy:'extend'});
+  groups.push({sps:new Set(), target:8, strategy:'extend'});
   renderGroups();
 }
 function removeGroup(idx){
