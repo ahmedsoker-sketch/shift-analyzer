@@ -152,6 +152,10 @@ tbody tr:hover{background:var(--bg)}
     <div class="section-label">Conditions</div>
     <div class="cond-list" id="cond-list"></div>
     <button class="add-grp-btn" id="add-grp-btn" style="display:none" onclick="addGroup()">+ إضافة group جديد</button>
+    <div style="display:flex;gap:8px;margin-bottom:10px;display:none" id="save-btns">
+      <button class="exp-btn" onclick="saveGroups()" style="flex:1">💾 حفظ الإعدادات</button>
+      <button class="exp-btn" onclick="clearSavedGroups()" style="color:var(--danger-text)">🗑 مسح المحفوظ</button>
+    </div>
     <button class="run-btn" onclick="runAnalysis()">▶ تحليل</button>
     <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;text-align:center" id="time-display"></div>
     <div class="err" id="err"></div>
@@ -298,9 +302,13 @@ function initSPs(){
   window._spNameToId=map;
   selSPs=new Set(allSPs);
   document.getElementById('cond-card').style.display='block';
-  groups=[{sps:new Set(), target:8, strategy:'extend'}];
-  renderGroups();
   document.getElementById('add-grp-btn').style.display='block';
+  document.getElementById('save-btns').style.display='flex';
+  // try load saved groups, else start fresh
+  if(!loadSavedGroups()){
+    groups=[{sps:new Set(), target:8, strategy:'extend'}];
+  }
+  renderGroups();
 }
 
 // ── Dropdown ──
@@ -840,6 +848,29 @@ function runAnalysis(){
   }
 
   document.getElementById('results-sec').style.display='block';
+}
+
+// ── Save/Load Groups ──
+function saveGroups(){
+  const toSave=groups.map(g=>({sps:[...g.sps],target:g.target,strategy:g.strategy}));
+  localStorage.setItem('shiftAnalyzerGroups', JSON.stringify(toSave));
+  const btn=event.target;
+  btn.textContent='✅ تم الحفظ!';
+  setTimeout(()=>btn.textContent='💾 حفظ الإعدادات',2000);
+}
+function loadSavedGroups(){
+  try{
+    const saved=localStorage.getItem('shiftAnalyzerGroups');
+    if(!saved) return false;
+    const parsed=JSON.parse(saved);
+    if(!parsed||!parsed.length) return false;
+    groups=parsed.map(g=>({sps:new Set(g.sps),target:g.target||8,strategy:g.strategy||'extend'}));
+    return true;
+  } catch(e){ return false; }
+}
+function clearSavedGroups(){
+  localStorage.removeItem('shiftAnalyzerGroups');
+  alert('تم مسح الإعدادات المحفوظة');
 }
 
 // ── Exports ──
