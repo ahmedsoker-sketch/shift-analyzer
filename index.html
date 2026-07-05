@@ -436,14 +436,16 @@ function renderGroups(){
 
 function calcAvgForSPs(sps){
   if(!rows.length||!sps.size) return null;
-  const cols=Object.keys(rows[0]);
+  const filtered=getFilteredRows();
+  if(!filtered.length) return null;
+  const cols=Object.keys(filtered[0]);
   const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
   const durCol =cols.find(c=>norm(c).includes('duration'));
   const idCol  =cols.find(c=>norm(c)==='employeeid')||cols.find(c=>norm(c).includes('employeeid'));
   const spNameCol=_spNameCol;
   if(!durCol||!idCol||!spNameCol) return null;
   const empTotals={};
-  rows.forEach(r=>{
+  filtered.forEach(r=>{
     const sp=String(r[spNameCol]||'').trim();
     if(!sps.has(sp)) return;
     const id=String(r[idCol]||'').trim();
