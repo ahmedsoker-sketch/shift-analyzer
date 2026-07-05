@@ -296,13 +296,8 @@ function initSPs(){
   });
   allSPs=Object.keys(map).sort();
   window._spNameToId=map;
-  selSPs=new Set(); // default empty — user picks
-  renderDDItems();
-  renderTags();
-  updateDDLbl();
-  
+  selSPs=new Set(allSPs);
   document.getElementById('cond-card').style.display='block';
-  // single group with no SPs by default
   groups=[{sps:new Set(), target:8, strategy:'extend'}];
   renderGroups();
   document.getElementById('add-grp-btn').style.display='block';
