@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Gap Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f7f7f5;--surface:#fff;--border:#e5e5e3;--border-strong:#d0d0cd;
+  --text-primary:#1a1a18;--text-secondary:#6b6b68;--text-muted:#a0a09d;
+  --accent:#ff6b35;--accent-bg:#fff3ef;--accent-border:#ffc4ad;--accent-text:#c94a18;
+  --success-bg:#edf7ed;--success-text:#2d7a2d;
+  --warn-bg:#fff8e6;--warn-text:#b07800;
+  --danger-bg:#fef0f0;--danger-text:#c0392b;
+  --radius:8px;
+}
+[data-theme="dark"]{
+  --bg:#181816;--surface:#232321;--border:#2e2e2b;--border-strong:#3d3d3a;
+  --text-primary:#f0f0ec;--text-secondary:#a0a09d;--text-muted:#6b6b68;
+  --accent:#ff7d4d;--accent-bg:#2d1a12;--accent-border:#7a3420;--accent-text:#ff9870;
+  --success-bg:#152215;--success-text:#5ab85a;
+  --warn-bg:#221a08;--warn-text:#f0b429;
+  --danger-bg:#1e1010;--danger-text:#e07070;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:var(--bg);color:var(--text-primary);min-height:100vh}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.theme-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;color:var(--text-secondary);font-size:12px;cursor:pointer}
+.main{max-width:1060px;margin:0 auto;padding:2rem 1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+.section-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+
+/* Drop zone */
+.drop-zone{border:1.5px dashed var(--border-strong);border-radius:12px;padding:2rem 1rem;text-align:center;cursor:pointer;color:var(--text-secondary);font-size:14px;margin-bottom:1.25rem;transition:all .2s}
+.drop-zone:hover,.drop-zone.hover{border-color:var(--accent);background:var(--accent-bg);color:var(--accent-text)}
+.drop-zone.loaded{border-color:#4caf50;background:var(--success-bg);color:var(--success-text)}
+.drop-icon{font-size:26px;margin-bottom:8px;display:block}
+#file-input{display:none}
+
+/* Dropdown */
+.dropdown-wrap{position:relative;margin-bottom:1rem}
+.dd-trigger{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--surface);cursor:pointer;font-size:13px;color:var(--text-primary);user-select:none}
+.dd-trigger:hover{border-color:var(--accent)}
+.dd-arrow{font-size:10px;color:var(--text-muted);transition:transform .2s}
+.dd-trigger.open .dd-arrow{transform:rotate(180deg)}
+.dd-menu{position:absolute;top:calc(100% + 4px);right:0;left:0;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);z-index:200;max-height:260px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.1);display:none}
+.dd-menu.open{display:block}
+.dd-search{padding:8px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)}
+.dd-search input{width:100%;border:none;background:transparent;outline:none;font-size:13px;color:var(--text-primary)}
+.dd-actions{display:flex;border-bottom:1px solid var(--border);position:sticky;top:41px;background:var(--surface)}
+.dd-act-btn{flex:1;padding:6px;font-size:12px;border:none;background:none;cursor:pointer;color:var(--text-secondary)}
+.dd-act-btn:hover{background:var(--bg);color:var(--accent-text)}
+.dd-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;font-size:13px}
+.dd-item:hover{background:var(--bg)}
+.dd-item.checked{color:var(--accent-text)}
+.dd-check{width:15px;height:15px;border:1.5px solid var(--border-strong);border-radius:3px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;color:#fff}
+.dd-item.checked .dd-check{background:var(--accent);border-color:var(--accent)}
+
+/* Tags */
+.tags-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:1rem;min-height:4px}
+.tag{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:20px;font-size:12px;color:var(--accent-text)}
+.tag-x{cursor:pointer;font-size:13px;opacity:.7;line-height:1}
+.tag-x:hover{opacity:1}
+
+/* Condition rows */
+.cond-list{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem}
+.cond-row{display:grid;grid-template-columns:1fr auto auto auto auto auto auto;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px}
+.cond-sp-label{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cond-sp-sub{font-size:11px;color:var(--text-secondary);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clabel{font-size:12px;color:var(--text-secondary);white-space:nowrap}
+.cinput{padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary);font-size:13px;width:64px;outline:none;text-align:center}
+.cinput:focus{border-color:var(--accent)}
+.cselect{padding:5px 8px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-primary);font-size:12px;outline:none;cursor:pointer}
+.cond-sp-avg{font-size:11px;color:var(--success-text);display:block;margin-top:3px;font-weight:500}
+.cx{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 2px;line-height:1}
+.cx:hover{color:var(--danger-text)}
+.add-grp-btn{width:100%;padding:7px;border:1px dashed var(--border-strong);border-radius:var(--radius);background:transparent;color:var(--text-secondary);font-size:13px;cursor:pointer;margin-bottom:1rem;text-align:center}
+.add-grp-btn:hover{border-color:var(--accent);color:var(--accent-text)}
+.no-sp-msg{text-align:center;padding:1.5rem;color:var(--text-muted);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius)}
+
+.run-btn{width:100%;padding:10px;background:var(--accent);border:none;border-radius:var(--radius);color:#fff;font-size:14px;font-weight:600;cursor:pointer}
+.run-btn:hover{opacity:.88}
+.err{color:var(--danger-text);background:var(--danger-bg);border-radius:var(--radius);padding:8px 12px;font-size:13px;margin-top:10px;display:none}
+
+/* Summary */
+.summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1.25rem}
+.stat-card{background:var(--bg);border-radius:var(--radius);padding:12px 14px}
+.stat-lbl{font-size:11px;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+.stat-val{font-size:22px;font-weight:600}
+.stat-sub{font-size:11px;color:var(--text-secondary);margin-top:2px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.tab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--text-secondary);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--accent-text);border-bottom-color:var(--accent)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Table */
+.res-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.badge{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:500}
+.badge-a{background:var(--accent-bg);color:var(--accent-text)}
+.badge-s{background:var(--success-bg);color:var(--success-text)}
+.exp-btn{padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text-secondary);font-size:13px;cursor:pointer;font-weight:500}
+.exp-btn:hover{border-color:var(--accent);color:var(--accent-text)}
+.exp-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.exp-btn.primary:hover{opacity:.88}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);white-space:nowrap;text-transform:uppercase;letter-spacing:.04em;background:var(--bg)}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text-primary);white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--bg)}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:500}
+.pw{background:var(--warn-bg);color:var(--warn-text)}
+.pi{background:var(--accent-bg);color:var(--accent-text)}
+.ps{background:var(--success-bg);color:var(--success-text)}
+.hnew{color:var(--accent-text);font-weight:600}
+.empty-r td{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>Shift Gap Analyzer</div>
+  <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+</div>
+<div class="main">
+
+  <div class="drop-zone" id="dz" onclick="document.getElementById('file-input').click()">
+    <span class="drop-icon">📂</span>
+    اسحب ملف CSV أو Excel هنا، أو اضغط للاختيار
+    <div id="fname" style="font-size:12px;margin-top:6px;color:var(--text-muted)"></div>
+  </div>
+  <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
+
+  <!-- SP card -->
+  <div class="card" id="sp-card" style="display:none">
+    <div class="section-label">Starting Points</div>
+    <div class="dropdown-wrap">
+      <div class="dd-trigger" id="dd-trigger" onclick="toggleDD()">
+        <span id="dd-lbl">اختار النقط...</span>
+        <span class="dd-arrow">▼</span>
+      </div>
+      <div class="dd-menu" id="dd-menu">
+        <div class="dd-search"><input type="text" placeholder="بحث..." id="dd-q" oninput="renderDDItems()"></div>
+        <div class="dd-actions">
+          <button class="dd-act-btn" onclick="selectAll();event.stopPropagation()">تحديد الكل</button>
+          <button class="dd-act-btn" onclick="clearAll();event.stopPropagation()">إلغاء الكل</button>
+        </div>
+        <div id="dd-items"></div>
+      </div>
+    </div>
+    <div class="tags-wrap" id="tags-wrap"></div>
+  </div>
+
+  <!-- Conditions card -->
+  <div class="card" id="cond-card" style="display:none">
+    <div class="section-label">Conditions</div>
+    <div class="cond-list" id="cond-list"></div>
+    <button class="add-grp-btn" id="add-grp-btn" style="display:none" onclick="addGroup()">+ إضافة group جديد</button>
+    <button class="run-btn" onclick="runAnalysis()">▶ تحليل</button>
+    <div style="font-size:12px;color:var(--text-secondary);margin-top:8px;text-align:center" id="time-display"></div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- Results -->
+  <div id="results-sec" style="display:none">
+    <div class="summary-grid" id="summary-grid"></div>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('a')">📊 التحليل</button>
+        <button class="tab" onclick="switchTab('u')">📋 ملف الرفع</button>
+      </div>
+      <div class="tab-panel active" id="tab-a">
+        <div class="res-header">
+          <span style="font-size:15px;font-weight:600">المناديب اللي محتاجين زيادة</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="badge badge-a" id="cnt-a"></span>
+            <button class="exp-btn" onclick="exportAnalysis()">⬇ Export</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table dir="ltr"><thead><tr>
+            <th>employee name</th><th>employee id</th><th>shift id</th>
+            <th>starting point</th><th>إجمالي</th><th>target</th>
+            <th>ناقص</th><th>start</th><th>end قديم</th><th>end جديد</th>
+          </tr></thead><tbody id="tbody-a"></tbody></table>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-u">
+        <div class="res-header">
+          <span style="font-size:15px;font-weight:600">ملف الرفع</span>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="badge badge-s" id="cnt-u"></span>
+            <button class="exp-btn primary" onclick="exportUpload()">⬇ تحميل Excel</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table dir="ltr"><thead><tr>
+            <th>shift_id</th><th>adjustment_type</th><th>employee_id</th>
+            <th>starting_point_id</th><th>start_date</th><th>end_date</th>
+            <th>start_time (local)</th><th>end_time (local)</th><th>shift_slots</th>
+          </tr></thead><tbody id="tbody-u"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let rows=[], allSPs=[], selSPs=new Set(), groups=[], results=[], uploads=[], dark=false;
+
+// ── Theme ──
+function toggleTheme(){
+  dark=!dark;
+  document.documentElement.setAttribute('data-theme',dark?'dark':'');
+  document.querySelector('.theme-btn').textContent=dark?'☀ Light':'🌙 Dark';
+}
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['a','u'][i]===t));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+t));
+}
+function showErr(m){const e=document.getElementById('err');e.textContent=m;e.style.display=m?'block':'none'}
+
+// ── File ──
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('hover')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('hover'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('hover');loadFile(e.dataTransfer.files[0])});
+document.getElementById('file-input').addEventListener('change',e=>loadFile(e.target.files[0]));
+
+function loadFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      dz.classList.add('loaded');
+      dz.querySelector('.drop-icon').textContent='✅';
+      document.getElementById('fname').textContent=file.name+' — '+rows.length+' صف';
+      showErr('');
+      initSPs();
+    }catch(e){showErr('تعذر قراءة الملف.');}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Column detection ──
+function findCol(cols, exact){
+  // try exact normalized match first
+  const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
+  return cols.find(c=>norm(c)===exact) || cols.find(c=>norm(c).includes(exact));
+}
+function getSPCols(cols){
+  // starting_point_id contains 'id', starting_point does not
+  const spId=cols.find(c=>/starting.?point.?id/i.test(c));
+  const spName=cols.find(c=>/starting.?point/i.test(c) && c!==spId);
+  return {spId, spName};
+}
+
+// ── SP init ──
+let _spNameCol=null, _spIdCol=null;
+function initSPs(){
+  if(!rows.length)return;
+  const cols=Object.keys(rows[0]);
+  const {spId,spName}=getSPCols(cols);
+  if(!spName&&!spId){showErr('مش لاقي عمود starting point.');return;}
+  _spNameCol=spName||null;
+  _spIdCol=spId||null;
+  const nameCol=spName||spId, idCol=spId||spName;
+  const map={};
+  rows.forEach(r=>{
+    const n=String(r[nameCol]||'').trim();
+    const id=String(r[idCol]||'').trim();
+    if(n) map[n]=id;
+  });
+  allSPs=Object.keys(map).sort();
+  window._spNameToId=map;
+  selSPs=new Set(); // default empty — user picks
+  renderDDItems();
+  renderTags();
+  updateDDLbl();
+  document.getElementById('sp-card').style.display='block';
+  document.getElementById('cond-card').style.display='block';
+  // single group with no SPs by default
+  groups=[{sps:new Set(), target:8, strategy:'extend'}];
+  renderGroups();
+  document.getElementById('add-grp-btn').style.display='block';
+}
+
+// ── Dropdown ──
+function toggleDD(){
+  const m=document.getElementById('dd-menu');
+  const t=document.getElementById('dd-trigger');
+  const open=m.classList.toggle('open');
+  t.classList.toggle('open',open);
+  if(open) document.getElementById('dd-q').focus();
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.dropdown-wrap')){
+    document.getElementById('dd-menu').classList.remove('open');
+    document.getElementById('dd-trigger').classList.remove('open');
+  }
+});
+function renderDDItems(){
+  const q=document.getElementById('dd-q').value.toLowerCase();
+  const c=document.getElementById('dd-items');
+  c.innerHTML='';
+  allSPs.filter(s=>s.toLowerCase().includes(q)).forEach(sp=>{
+    const d=document.createElement('div');
+    d.className='dd-item'+(selSPs.has(sp)?' checked':'');
+    d.innerHTML=`<div class="dd-check">${selSPs.has(sp)?'✓':''}</div><span>${sp}</span>`;
+    d.addEventListener('click',e=>{e.stopPropagation();toggleSP(sp)});
+    c.appendChild(d);
+  });
+}
+function toggleSP(sp){
+  selSPs.has(sp)?selSPs.delete(sp):selSPs.add(sp);
+  renderDDItems();renderTags();updateDDLbl();syncGroupSPs();
+}
+function selectAll(){allSPs.forEach(s=>selSPs.add(s));renderDDItems();renderTags();updateDDLbl();syncGroupSPs()}
+function clearAll(){selSPs.clear();renderDDItems();renderTags();updateDDLbl();syncGroupSPs()}
+function updateDDLbl(){
+  const n=selSPs.size;
+  document.getElementById('dd-lbl').textContent=n===0?'اختار النقط...':n===allSPs.length?'كل النقط ('+n+')':n+' نقطة محددة';
+}
+function renderTags(){
+  const w=document.getElementById('tags-wrap');
+  w.innerHTML='';
+  [...selSPs].sort().forEach(sp=>{
+    const t=document.createElement('div');
+    t.className='tag';
+    const safe=sp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    t.innerHTML=sp+`<span class="tag-x" onclick="toggleSP('${safe}')">✕</span>`;
+    w.appendChild(t);
+  });
+}
+
+// when SP selection changes, update all groups to remove deselected SPs
+function syncGroupSPs(){
+  groups.forEach(g=>{g.sps=new Set([...g.sps].filter(s=>selSPs.has(s)))});
+  // put uncovered SPs in first group
+  const covered=new Set(groups.flatMap(g=>[...g.sps]));
+  const uncovered=[...selSPs].filter(s=>!covered.has(s));
+  if(uncovered.length>0){
+    if(groups.length>0) uncovered.forEach(s=>groups[0].sps.add(s));
+    else groups=[{sps:new Set(uncovered),target:8,strategy:'extend'}];
+  }
+  groups=groups.filter(g=>g.sps.size>0);
+  renderGroups();
+}
+
+// ── Groups ──
+function addGroup(){
+  // new group starts with all selected SPs (user can then move SPs around by removing groups)
+  groups.push({sps:new Set([...selSPs]),target:8,strategy:'extend'});
+  renderGroups();
+}
+function removeGroup(idx){
+  const orphans=[...groups[idx].sps];
+  groups.splice(idx,1);
+  const covered=new Set(groups.flatMap(g=>[...g.sps]));
+  const still=orphans.filter(s=>selSPs.has(s)&&!covered.has(s));
+  if(still.length>0){
+    if(groups.length>0) still.forEach(s=>groups[0].sps.add(s));
+    else groups=[{sps:new Set(still),target:8,strategy:'extend'}];
+  }
+  renderGroups();
+}
+function renderGroups(){
+  const list=document.getElementById('cond-list');
+  list.innerHTML='';
+  if(groups.length===0||selSPs.size===0){
+    list.innerHTML='<div class="no-sp-msg">اختار starting points الأول</div>';
+    return;
+  }
+  groups.forEach((g,i)=>{
+    const names=[...g.sps].sort().join(', ');
+    const short=names.length>55?names.slice(0,53)+'…':names;
+    // calc avg for this group's SPs
+    const avg=calcAvgForSPs(g.sps);
+    const avgStr=avg!==null?'متوسط الساعات: <b>'+fmtH(avg)+'</b>':'';
+    const row=document.createElement('div');
+    row.className='cond-row';
+    row.innerHTML=`
+      <div class="cond-sp-label">Group ${i+1}<span class="cond-sp-sub" title="${names}">${short}</span>${avgStr?'<span class="cond-sp-avg">'+avgStr+'</span>':''}</div>
+      <span class="clabel">Target h</span>
+      <input class="cinput" type="number" min="1" max="24" step="0.5" value="${g.target}" onchange="groups[${i}].target=+this.value">
+      <select class="cselect" onchange="groups[${i}].strategy=this.value">
+        <option value="extend" ${g.strategy==='extend'?'selected':''}>⏩ Extend</option>
+        <option value="gaps"   ${g.strategy==='gaps'  ?'selected':''}>🔀 Fill gaps</option>
+        <option value="hybrid" ${g.strategy==='hybrid'?'selected':''}>⚡ Hybrid</option>
+      </select>
+      <button class="cx" onclick="removeGroup(${i})">✕</button>`;
+    list.appendChild(row);
+  });
+}
+
+function calcAvgForSPs(sps){
+  if(!rows.length||!sps.size) return null;
+  const cols=Object.keys(rows[0]);
+  const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
+  const durCol =cols.find(c=>norm(c).includes('duration'));
+  const idCol  =cols.find(c=>norm(c)==='employeeid')||cols.find(c=>norm(c).includes('employeeid'));
+  const spNameCol=_spNameCol;
+  if(!durCol||!idCol||!spNameCol) return null;
+  const empTotals={};
+  rows.forEach(r=>{
+    const sp=String(r[spNameCol]||'').trim();
+    if(!sps.has(sp)) return;
+    const id=String(r[idCol]||'').trim();
+    const dur=parseSec(r[durCol]);
+    if(!id||!dur) return;
+    if(!empTotals[id]) empTotals[id]=0;
+    empTotals[id]+=(dur||0);
+  });
+  const totals=Object.values(empTotals);
+  if(!totals.length) return null;
+  return totals.reduce((a,b)=>a+b,0)/totals.length;
+}
+
+// ── Helpers ──
+function parseSec(v){
+  if(v===null||v===undefined||v==='')return null;
+  if(typeof v==='number')return Math.round(v*86400);
+  const p=String(v).trim().split(':');
+  if(p.length===3)return +p[0]*3600+ +p[1]*60+ +p[2];
+  if(p.length===2)return +p[0]*3600+ +p[1]*60;
+  return null;
+}
+function toHHMM(s){
+  if(s==null)return '';
+  s=((Math.round(s)%86400)+86400)%86400;
+  return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0');
+}
+function fmtH(s){
+  if(s==null)return '—';
+  s=Math.round(Math.abs(s));
+  return Math.floor(s/3600)+'h '+String(Math.floor((s%3600)/60)).padStart(2,'0')+'m';
+}
+function fmtDate(v){
+  if(!v)return '';
+  if(typeof v==='number'){
+    const d=new Date(Math.round((v-25569)*86400*1000));
+    return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+  }
+  const s=String(v).trim();
+  return /^\d{4}-\d{2}-\d{2}/.test(s)?s.slice(0,10):s;
+}
+
+// ── Analysis ──
+function runAnalysis(){
+  showErr('');
+  if(!rows.length){showErr('ارفع الملف الأول.');return}
+  if(!groups.length){showErr('حدد conditions.');return}
+
+  // show current Cairo time
+  const cairoNow = new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+  const cairoTimeStr = String(cairoNow.getHours()).padStart(2,'0')+':'+String(cairoNow.getMinutes()).padStart(2,'0');
+  document.getElementById('time-display').textContent = '🕐 الوقت الحالي (القاهرة): '+cairoTimeStr;
+
+  const cols=Object.keys(rows[0]);
+  const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
+
+  const nameCol =cols.find(c=>['employeename','name'].includes(norm(c)))||cols.find(c=>norm(c).includes('employeename')||norm(c).includes('empname'));
+  const idCol   =cols.find(c=>norm(c)==='employeeid')||cols.find(c=>norm(c).includes('employeeid'));
+  const shiftCol=cols.find(c=>norm(c)==='shiftid')||cols.find(c=>norm(c).includes('shiftid'));
+  const durCol  =cols.find(c=>norm(c).includes('duration'));
+  const sTCol   =cols.find(c=>norm(c)==='plannedstarttime')||cols.find(c=>norm(c).includes('plannedstart'))||cols.find(c=>norm(c).includes('starttime'));
+  const eTCol   =cols.find(c=>norm(c)==='plannedendtime')||cols.find(c=>norm(c).includes('plannedend'))||cols.find(c=>norm(c).includes('endtime'));
+  const sDCol   =cols.find(c=>norm(c).includes('startdate'));
+  const eDCol   =cols.find(c=>norm(c).includes('enddate'));
+  const spIdCol  =_spIdCol;
+  const spNameCol=_spNameCol;
+
+  if(!nameCol||!durCol){showErr('مش لاقي employee name أو duration.');return}
+
+  // build SP → group map (last group wins if SP in multiple)
+  const spToGroup={};
+  groups.forEach(g=>[...g.sps].forEach(sp=>{spToGroup[sp]=g}));
+
+  const riderMap={};
+  rows.forEach(row=>{
+    const name=String(row[nameCol]||'').trim();
+    if(!name)return;
+    const spName=spNameCol?String(row[spNameCol]||'').trim():'';
+    const spId  =spIdCol  ?String(row[spIdCol  ]||'').trim():'';
+    // only include rows whose SP is selected — exact match after trim
+    if(!spName || !selSPs.has(spName))return;
+
+    const empId    =idCol   ?String(row[idCol]||'').trim():'';
+    const shiftId  =shiftCol?row[shiftCol]:'';
+    const dur      =parseSec(row[durCol]);
+    const startT   =sTCol?parseSec(row[sTCol]):null;
+    const endT     =eTCol?parseSec(row[eTCol]):null;
+    const startDate=sDCol?fmtDate(row[sDCol]):'';
+    const endDate  =eDCol?fmtDate(row[eDCol]):'';
+
+    if(!riderMap[name])riderMap[name]={empId,total:0,shifts:[]};
+    // only add to total if SP is selected (already filtered above)
+    riderMap[name].total+=(dur||0);
+    riderMap[name].shifts.push({shiftId,dur:dur||0,startT,endT,startDate,endDate,spName,spId});
+    riderMap[name].empId=empId; // keep updating in case first row had empty id
+  });
+
+  results=[];uploads=[];
+  let totalR=0,belowT=0,totalNeed=0;
+
+  Object.entries(riderMap).forEach(([name,data])=>{
+    totalR++;
+    // sort by endT, pick last shift
+    // sort by startDate + endT (if endT < startT → overnight, add 86400)
+    data.shifts.sort((a,b)=>{
+      const absA=(a.startDate?new Date(a.startDate+'T00:00:00Z').getTime()/1000:0)+(a.endT??0)+((a.endT??0)<(a.startT??0)?86400:0);
+      const absB=(b.startDate?new Date(b.startDate+'T00:00:00Z').getTime()/1000:0)+(b.endT??0)+((b.endT??0)<(b.startT??0)?86400:0);
+      return absA-absB;
+    });
+    const last=data.shifts[data.shifts.length-1];
+
+    // filter: skip if last shift already ended (using start_date + end_time)
+    const nowCairo = new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+    const todayAbs2 = new Date(nowCairo.toISOString().slice(0,10)+'T00:00:00Z').getTime()/1000;
+    const nowAbs2 = todayAbs2 + nowCairo.getHours()*3600 + nowCairo.getMinutes()*60;
+    const lastAbsEnd = (last.startDate?new Date(last.startDate+'T00:00:00Z').getTime()/1000:0)+(last.endT??0)+((last.endT??0)<(last.startT??0)?86400:0);
+    if(lastAbsEnd <= nowAbs2) return;
+
+    // find group by last shift's SP name
+    const grp=spToGroup[last.spName]||groups[0];
+    const targetSec=grp.target*3600;
+    
+    const strat=grp.strategy;
+
+    if(data.total>=targetSec)return;
+    belowT++;
+    const needed=targetSec-data.total;
+    totalNeed+=needed;
+
+    // current Cairo time as absolute seconds from epoch
+    const nowCairoDate = new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+    const todayAbsSec = Math.floor(new Date(nowCairoDate.toISOString().slice(0,10)+'T00:00:00Z').getTime()/1000);
+    const nowAbsSec = todayAbsSec + nowCairoDate.getHours()*3600 + nowCairoDate.getMinutes()*60;
+
+    // absolute end time: use start_date as base, add end_time
+    // if end_time < start_time → crosses midnight → add 86400
+    const toAbs=s=>{
+      const base=s.startDate?new Date(s.startDate+'T00:00:00Z').getTime()/1000:0;
+      const eT=s.endT??0;
+      const sT=s.startT??0;
+      return base + eT + (eT<sT?86400:0);
+    };
+    const toAbsStart=s=>{
+      const base=s.startDate?new Date(s.startDate+'T00:00:00Z').getTime()/1000:0;
+      return base+(s.startT??0);
+    };
+
+    const gaps=[];
+    for(let i=1;i<data.shifts.length;i++){
+      const prevS=data.shifts[i-1];
+      const nextS=data.shifts[i];
+      const prevEnd=toAbs(prevS);
+      const nextStart=toAbsStart(nextS);
+      const g=nextStart-prevEnd;
+      // only include gaps that haven't started yet (prevEnd in the future)
+      if(g>0 && prevEnd>=nowAbsSec) gaps.push({prevShift:prevS, gapSec:g, prevEnd, nextStart});
+    }
+
+    // helper: given a shift's startDate and new endT (seconds), calculate correct end_date
+    function calcEndDate(startDate, startT, newEndT){
+      if(!startDate) return startDate;
+      // if new end crosses midnight (newEndT >= 86400 or newEndT < startT after wrapping)
+      const wrappedEnd = newEndT % 86400;
+      const crossesMidnight = newEndT >= 86400 || wrappedEnd < (startT??0);
+      if(crossesMidnight){
+        const d=new Date(startDate+'T00:00:00Z');
+        d.setUTCDate(d.getUTCDate()+1);
+        return d.toISOString().slice(0,10);
+      }
+      return startDate;
+    }
+
+    let remainNeeded=needed;
+    let uploadRowsForRider=[];
+    let totalAddedSec=0;
+
+    if(strat==='hybrid'||strat==='gaps'){
+      for(const {prevShift, gapSec} of gaps){
+        if(remainNeeded<=0) break;
+        const fillSec=Math.min(gapSec, remainNeeded);
+        const newPrevEndT=(prevShift.endT??0)+fillSec;
+        const newEndDate2=calcEndDate(prevShift.startDate, prevShift.startT, newPrevEndT);
+        uploadRowsForRider.push({
+          shift_id:prevShift.shiftId,
+          adjustment_type:'UPDATE',
+          employee_id:data.empId,
+          starting_point_id:prevShift.spId,
+          start_date:prevShift.startDate,
+          end_date:newEndDate2,
+          'start_time (local)':toHHMM(prevShift.startT),
+          'end_time (local)':toHHMM(newPrevEndT),
+          shift_slots:''
+        });
+        remainNeeded-=fillSec;
+        totalAddedSec+=fillSec;
+      }
+    }
+
+    // for extend or hybrid/gaps if still remaining — extend last shift
+    let addSecOnLast=0;
+    if(strat==='extend') addSecOnLast=needed;
+    else if((strat==='hybrid'||strat==='gaps')&&remainNeeded>0) addSecOnLast=remainNeeded;
+
+    const oldEnd=last.endT??0;
+    const newEnd=oldEnd+addSecOnLast;
+    let newEndDate=last.startDate;
+    if(addSecOnLast>0){
+      newEndDate=calcEndDate(last.startDate, last.startT, newEnd);
+    } else {
+      newEndDate=last.endDate;
+    }
+    if(addSecOnLast>0){
+      uploadRowsForRider.push({
+        shift_id:last.shiftId,
+        adjustment_type:'UPDATE',
+        employee_id:data.empId,
+        starting_point_id:last.spId,
+        start_date:last.startDate,
+        end_date:newEndDate,
+        'start_time (local)':toHHMM(last.startT),
+        'end_time (local)':toHHMM(newEnd),
+        shift_slots:''
+      });
+    }
+
+    uploads.push(...uploadRowsForRider);
+
+    const addSec=totalAddedSec+addSecOnLast;
+    const displayNewEnd=addSecOnLast>0?newEnd:oldEnd;
+
+    results.push({name,empId:data.empId,shiftId:last.shiftId,spName:last.spName,spId:last.spId,
+      total:data.total,target:targetSec,needed,addSec,
+      startStr:toHHMM(last.startT),oldEndStr:toHHMM(oldEnd),newEndStr:toHHMM(displayNewEnd),
+      startDate:last.startDate,endDate:newEndDate,
+      uploadCount:uploadRowsForRider.length});
+  });
+
+  results.sort((a,b)=>a.total-b.total);
+
+  // summary
+  document.getElementById('summary-grid').innerHTML=`
+    <div class="stat-card"><div class="stat-lbl">إجمالي</div><div class="stat-val">${totalR}</div></div>
+    <div class="stat-card"><div class="stat-lbl">تحت الـ target</div><div class="stat-val" style="color:var(--accent-text)">${belowT}</div><div class="stat-sub">${Math.round(belowT/Math.max(totalR,1)*100)}%</div></div>
+    <div class="stat-card"><div class="stat-lbl">ساعات ناقصة</div><div class="stat-val">${fmtH(totalNeed)}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Groups</div><div class="stat-val">${groups.length}</div></div>
+  `;
+
+  // analysis tab
+  document.getElementById('cnt-a').textContent=results.length+' مندوب';
+  const ta=document.getElementById('tbody-a');
+  ta.innerHTML='';
+  if(!results.length){
+    ta.innerHTML='<tr class="empty-r"><td colspan="10">🎉 كل المناديب وصلوا الـ target!</td></tr>';
+  } else {
+    results.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td style="font-weight:500">${r.name}</td>
+        <td style="color:var(--text-secondary);font-size:12px">${r.empId||'—'}</td>
+        <td style="color:var(--text-secondary);font-size:12px">${r.shiftId||'—'}</td>
+        <td style="font-size:12px">${r.spName||'—'}</td>
+        <td><span class="pill pw">${fmtH(r.total)}</span></td>
+        <td style="color:var(--text-secondary)">${fmtH(r.target)}</td>
+        <td><span class="pill pi">${fmtH(r.needed)}</span></td>
+        <td>${r.startStr}</td>
+        <td style="color:var(--text-secondary)">${r.oldEndStr}</td>
+        <td class="hnew">${r.addSec>0?r.newEndStr+( r.uploadCount>1?' <span class="pill ps">'+r.uploadCount+' صفوف</span>':''):'<span class="pill ps">OK</span>'}</td>`;
+      ta.appendChild(tr);
+    });
+  }
+
+  // upload tab
+  document.getElementById('cnt-u').textContent=uploads.length+' صف';
+  const tu=document.getElementById('tbody-u');
+  tu.innerHTML='';
+  if(!uploads.length){
+    tu.innerHTML='<tr class="empty-r"><td colspan="9">مفيش صفوف للرفع</td></tr>';
+  } else {
+    uploads.forEach(u=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td>${u.shift_id}</td>
+        <td>UPDATE</td>
+        <td>${u.employee_id}</td>
+        <td>${u.starting_point_id}</td>
+        <td>${u.start_date}</td>
+        <td>${u.end_date}</td>
+        <td>${u['start_time (local)']}</td>
+        <td class="hnew">${u['end_time (local)']}</td>
+        <td></td>`;
+      tu.appendChild(tr);
+    });
+  }
+
+  document.getElementById('results-sec').style.display='block';
+}
+
+// ── Exports ──
+function exportUpload(){
+  if(!uploads.length)return;
+  const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
+  const data=[hdrs,...uploads.map(u=>hdrs.map(h=>u[h]??''))];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Upload');
+  XLSX.writeFile(wb,'shift_upload_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function exportAnalysis(){
+  if(!results.length)return;
+  const hdrs=['Employee Name','Employee ID','Shift ID','Starting Point','Total','Target','Needed','Start','Old End','New End'];
+  const data=[hdrs,...results.map(r=>[r.name,r.empId,r.shiftId,r.spName,fmtH(r.total),fmtH(r.target),fmtH(r.needed),r.startStr,r.oldEndStr,r.addSec>0?r.newEndStr:'No change'])];
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_analysis.csv';a.click();
+}
+</script>
+</body>
+</html>
