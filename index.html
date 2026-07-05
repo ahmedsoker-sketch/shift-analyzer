@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shift Analyzer</title>
+<title>Shift Gap Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -405,41 +405,68 @@ function removeGroup(idx){
   renderGroups();
 }
 function toggleGroupSP(idx, sp, checked){
-  if(checked) groups[idx].sps.add(sp);
-  else groups[idx].sps.delete(sp);
+  if(checked){
+    // remove from other groups first
+    groups.forEach((g,i)=>{ if(i!==idx) g.sps.delete(sp); });
+    groups[idx].sps.add(sp);
+  } else {
+    groups[idx].sps.delete(sp);
+  }
   renderGroups();
 }
+
+function toggleGroupDD(idx){
+  // close all other group dropdowns
+  document.querySelectorAll('.grp-dd-menu').forEach((m,i)=>{
+    if(i!==idx){ m.classList.remove('open'); }
+  });
+  const menu=document.getElementById('grp-dd-'+idx);
+  const trigger=document.getElementById('grp-tr-'+idx);
+  const open=menu.classList.toggle('open');
+  trigger.classList.toggle('open',open);
+}
+
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.grp-dd-wrap')){
+    document.querySelectorAll('.grp-dd-menu').forEach(m=>m.classList.remove('open'));
+    document.querySelectorAll('.grp-tr').forEach(t=>t.classList.remove('open'));
+  }
+});
 
 function renderGroups(){
   const list=document.getElementById('cond-list');
   list.innerHTML='';
-  if(selSPs.size===0){
+  if(selSPs.size===0&&allSPs.length===0){
     list.innerHTML='<div class="no-sp-msg">اختار starting points الأول</div>';
     return;
   }
   groups.forEach((g,i)=>{
     const names=[...g.sps].sort().join(', ');
-    const short=names.length>55?names.slice(0,53)+'…':names;
     const avg=calcAvgForSPs(g.sps);
     const avgStr=avg!==null?'متوسط الساعات: <b>'+fmtH(avg)+'</b>':''
-    const row=document.createElement('div');
-    row.className='cond-row';
-    row.style.cssText='flex-direction:column;align-items:stretch;gap:8px';
 
-    const spOptions=[...allSPs].sort().map(sp=>{
+    const ddItems=allSPs.map(sp=>{
       const chk=g.sps.has(sp);
       const safeSp=sp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      return `<label style="display:flex;align-items:center;gap:8px;padding:5px 10px;cursor:pointer;font-size:12px;border-radius:6px;background:${chk?'var(--accent-bg)':' transparent'}">
-        <input type="checkbox" ${chk?'checked':''} onchange="toggleGroupSP(${i},'${safeSp}',this.checked)" style="accent-color:var(--accent)">
-        <span style="color:${chk?'var(--accent-text)':' var(--text-primary)'}">${sp}</span>
-      </label>`;
+      return `<div class="dd-item ${chk?'checked':''}" onclick="toggleGroupSP(${i},'${safeSp}',${!chk});event.stopPropagation()">
+        <div class="dd-check">${chk?'✓':''}</div>
+        <span>${sp}</span>
+      </div>`;
     }).join('');
 
+    const tags=[...g.sps].sort().map(sp=>{
+      const safeSp=sp.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<div class="tag" style="font-size:11px;padding:3px 8px">${sp}<span class="tag-x" onclick="toggleGroupSP(${i},'${safeSp}',false)">✕</span></div>`;
+    }).join('');
+
+    const row=document.createElement('div');
+    row.className='card';
+    row.style.cssText='margin-bottom:8px;padding:12px';
     row.innerHTML=`
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div class="cond-sp-label">Group ${i+1}
-          ${names?`<span class="cond-sp-sub">${short}</span>`:`<span class="cond-sp-sub" style="color:var(--warn-text)">اختار نقطة</span>`}
-          ${avgStr?`<span class="cond-sp-avg">${avgStr}</span>`:''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div>
+          <span style="font-weight:600;font-size:13px">Group ${i+1}</span>
+          ${avgStr?`<span class="cond-sp-avg" style="display:inline;margin-right:8px">${avgStr}</span>`:''}
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="clabel">Target h</span>
@@ -452,9 +479,21 @@ function renderGroups(){
           <button class="cx" onclick="removeGroup(${i})">✕</button>
         </div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:2px;background:var(--bg);border-radius:var(--radius);padding:4px;max-height:150px;overflow-y:auto">
-        ${spOptions}
-      </div>`;
+      <div class="grp-dd-wrap" style="position:relative;margin-bottom:8px">
+        <div class="dd-trigger grp-tr" id="grp-tr-${i}" onclick="toggleGroupDD(${i});event.stopPropagation()">
+          <span>${g.sps.size>0?g.sps.size+' نقطة محددة':'اختار النقط...'}</span>
+          <span class="dd-arrow">▼</span>
+        </div>
+        <div class="dd-menu grp-dd-menu" id="grp-dd-${i}">
+          <div class="dd-actions">
+            <button class="dd-act-btn" onclick="[...allSPs].forEach(s=>toggleGroupSP(${i},s,true));event.stopPropagation()">تحديد الكل</button>
+            <button class="dd-act-btn" onclick="groups[${i}].sps.clear();renderGroups();event.stopPropagation()">إلغاء الكل</button>
+          </div>
+          <div>${ddItems}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${tags||'<span style="font-size:12px;color:var(--text-muted)">لا توجد نقط محددة</span>'}</div>
+    `;
     list.appendChild(row);
   });
 }
