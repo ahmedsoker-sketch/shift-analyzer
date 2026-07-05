@@ -136,6 +136,15 @@ tbody tr:hover{background:var(--bg)}
   </div>
   <input type="file" id="file-input" accept=".csv,.xlsx,.xls">
 
+  <!-- Date filter -->
+  <div class="card" id="date-card" style="display:none">
+    <div class="section-label">تاريخ الشيفتات</div>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <input type="date" id="date-filter" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;cursor:pointer">
+      <span style="font-size:12px;color:var(--text-secondary)" id="date-count"></span>
+    </div>
+  </div>
+
   <!-- SP card -->
   <div class="card" id="sp-card" style="display:none">
     <div class="section-label">Starting Points</div>
@@ -246,6 +255,13 @@ function loadFile(file){
       dz.querySelector('.drop-icon').textContent='✅';
       document.getElementById('fname').textContent=file.name+' — '+rows.length+' صف';
       showErr('');
+      // set default date to today Cairo
+      const today=new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+      const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      document.getElementById('date-filter').value=todayStr;
+      document.getElementById('date-card').style.display='block';
+      document.getElementById('date-filter').addEventListener('change', ()=>{updateDateCount(); initSPs();});
+      updateDateCount();
       initSPs();
     }catch(e){showErr('تعذر قراءة الملف.');}
   };
@@ -253,6 +269,20 @@ function loadFile(file){
 }
 
 // ── Column detection ──
+function getFilteredRows(){
+  const d=document.getElementById('date-filter').value;
+  if(!d) return rows;
+  const cols=Object.keys(rows[0]||{});
+  const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
+  const sDCol=cols.find(c=>norm(c).includes('startdate'));
+  if(!sDCol) return rows;
+  return rows.filter(r=>fmtDate(r[sDCol])===d);
+}
+function updateDateCount(){
+  const filtered=getFilteredRows();
+  const d=document.getElementById('date-filter').value;
+  document.getElementById('date-count').textContent=d?filtered.length+' صف بتاريخ '+d:'';
+}
 function findCol(cols, exact){
   // try exact normalized match first
   const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
@@ -269,14 +299,15 @@ function getSPCols(cols){
 let _spNameCol=null, _spIdCol=null;
 function initSPs(){
   if(!rows.length)return;
-  const cols=Object.keys(rows[0]);
+  const filtered=getFilteredRows();
+  const cols=Object.keys(filtered[0]||rows[0]);
   const {spId,spName}=getSPCols(cols);
   if(!spName&&!spId){showErr('مش لاقي عمود starting point.');return;}
   _spNameCol=spName||null;
   _spIdCol=spId||null;
   const nameCol=spName||spId, idCol=spId||spName;
   const map={};
-  rows.forEach(r=>{
+  filtered.forEach(r=>{
     const n=String(r[nameCol]||'').trim();
     const id=String(r[idCol]||'').trim();
     if(n) map[n]=id;
@@ -466,7 +497,9 @@ function runAnalysis(){
   const cairoTimeStr = String(cairoNow.getHours()).padStart(2,'0')+':'+String(cairoNow.getMinutes()).padStart(2,'0');
   document.getElementById('time-display').textContent = '🕐 الوقت الحالي (القاهرة): '+cairoTimeStr;
 
-  const cols=Object.keys(rows[0]);
+  const filtered=getFilteredRows();
+  if(!filtered.length){showErr('مفيش شيفتات بالتاريخ ده.');return}
+  const cols=Object.keys(filtered[0]);
   const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
 
   const nameCol =cols.find(c=>['employeename','name'].includes(norm(c)))||cols.find(c=>norm(c).includes('employeename')||norm(c).includes('empname'));
@@ -487,7 +520,7 @@ function runAnalysis(){
   groups.forEach(g=>[...g.sps].forEach(sp=>{spToGroup[sp]=g}));
 
   const riderMap={};
-  rows.forEach(row=>{
+  filtered.forEach(row=>{
     const name=String(row[nameCol]||'').trim();
     if(!name)return;
     const spName=spNameCol?String(row[spNameCol]||'').trim():'';
