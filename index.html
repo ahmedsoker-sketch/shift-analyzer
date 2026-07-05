@@ -571,7 +571,7 @@ function runAnalysis(){
   });
 
   results=[];uploads=[];
-  let totalR=0,belowT=0,totalNeed=0;
+  let totalR=0,belowT=0,totalNeed=0,totalInvalid=0;
 
   Object.entries(riderMap).forEach(([name,data])=>{
     totalR++;
@@ -698,7 +698,16 @@ function runAnalysis(){
       });
     }
 
-    uploads.push(...uploadRowsForRider);
+    // filter: only keep rows where start_time is on quarter-hour (:00, :15, :30, :45)
+    function isValidQuarter(timeStr){
+      if(!timeStr) return false;
+      const mins=parseInt(timeStr.split(':')[1]||'0');
+      return [0,15,30,45].includes(mins);
+    }
+    const validRows=uploadRowsForRider.filter(r=>isValidQuarter(r['start_time (local)']));
+    const invalidCount=uploadRowsForRider.length-validRows.length;
+    totalInvalid+=invalidCount;
+    uploads.push(...validRows);
 
     const addSec=totalAddedSec+addSecOnLast;
     const displayNewEnd=addSecOnLast>0?newEnd:oldEnd;
@@ -718,6 +727,7 @@ function runAnalysis(){
     <div class="stat-card"><div class="stat-lbl">تحت الـ target</div><div class="stat-val" style="color:var(--accent-text)">${belowT}</div><div class="stat-sub">${Math.round(belowT/Math.max(totalR,1)*100)}%</div></div>
     <div class="stat-card"><div class="stat-lbl">ساعات ناقصة</div><div class="stat-val">${fmtH(totalNeed)}</div></div>
     <div class="stat-card"><div class="stat-lbl">Groups</div><div class="stat-val">${groups.length}</div></div>
+    ${totalInvalid>0?`<div class="stat-card"><div class="stat-lbl">غير قابل للزيادة</div><div class="stat-val" style="color:var(--danger-text)">${totalInvalid}</div><div class="stat-sub">start_time مش على ربع ساعة</div></div>`:''}
   `;
 
   // analysis tab
