@@ -853,7 +853,7 @@ function runAnalysis(){
     <div class="stat-card"><div class="stat-lbl">تحت الـ target</div><div class="stat-val" style="color:var(--accent-text)">${belowT}</div><div class="stat-sub">${Math.round(belowT/Math.max(totalR,1)*100)}%</div></div>
     <div class="stat-card"><div class="stat-lbl">ساعات ناقصة</div><div class="stat-val">${fmtH(totalNeed)}</div></div>
     <div class="stat-card"><div class="stat-lbl">Groups</div><div class="stat-val">${groups.length}</div></div>
-    ${totalInvalid>0?`<div class="stat-card"><div class="stat-lbl">غير قابل للزيادة</div><div class="stat-val" style="color:var(--danger-text)">${totalInvalid}</div><div class="stat-sub">start_time مش على ربع ساعة</div></div>`:''}
+    ${totalInvalid>0?`<div class="stat-card"><div class="stat-lbl">غير قابل للزيادة</div><div class="stat-val" style="color:var(--danger-text)">${totalInvalid}</div><div class="stat-sub">شيفت مكسور</div></div>`:''}
     ${totalCapped>0?`<div class="stat-card"><div class="stat-lbl">🔒 اتقفل عليهم الوقت</div><div class="stat-val" style="color:var(--danger-text)">${totalCapped}</div><div class="stat-sub">لسه ناقصين رغم القفل</div></div>`:''}
   `;
 
