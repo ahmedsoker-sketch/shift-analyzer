@@ -306,7 +306,7 @@ function initSPs(){
   document.getElementById('save-btns').style.display='flex';
   // try load saved groups, else start fresh
   if(!loadSavedGroups()){
-    groups=[{sps:new Set(), target:8, strategy:'extend'}];
+    groups=[{sps:new Set(), target:8, strategy:'extend', cutoff:''}];
   }
   renderGroups();
 }
@@ -377,7 +377,7 @@ function syncGroupSPs(){
   const uncovered=[...selSPs].filter(s=>!covered.has(s));
   if(uncovered.length>0){
     if(groups.length>0) uncovered.forEach(s=>groups[0].sps.add(s));
-    else groups=[{sps:new Set(uncovered),target:8,strategy:'extend'}];
+    else groups=[{sps:new Set(uncovered),target:8,strategy:'extend',cutoff:''}];
   }
   groups=groups.filter(g=>g.sps.size>0);
   renderGroups();
@@ -385,8 +385,23 @@ function syncGroupSPs(){
 
 // ── Groups ──
 function addGroup(){
-  groups.push({sps:new Set(), target:8, strategy:'extend'});
+  groups.push({sps:new Set(), target:8, strategy:'extend', cutoff:''});
   renderGroups();
+}
+// enforce strict 24h HH:MM format (no AM/PM ambiguity), like military/aviation time
+function setGroupCutoff(idx, el){
+  const v=el.value.trim();
+  if(v===''){ groups[idx].cutoff=''; el.style.borderColor=''; return; }
+  const m=v.match(/^([01]?[0-9]|2[0-3]):([0-5][0-9])$/);
+  if(!m){
+    el.style.borderColor='var(--danger-text)';
+    alert('اكتب الوقت بصيغة 24 ساعة زي 04:00 أو 16:30');
+    return;
+  }
+  const hh=String(+m[1]).padStart(2,'0');
+  groups[idx].cutoff=hh+':'+m[2];
+  el.value=groups[idx].cutoff;
+  el.style.borderColor='';
 }
 function removeGroup(idx){
   const orphans=[...groups[idx].sps];
@@ -395,7 +410,7 @@ function removeGroup(idx){
   const still=orphans.filter(s=>selSPs.has(s)&&!covered.has(s));
   if(still.length>0){
     if(groups.length>0) still.forEach(s=>groups[0].sps.add(s));
-    else groups=[{sps:new Set(still),target:8,strategy:'extend'}];
+    else groups=[{sps:new Set(still),target:8,strategy:'extend',cutoff:''}];
   }
   renderGroups();
 }
@@ -505,6 +520,8 @@ function renderGroups(){
             <option value="gaps"   ${g.strategy==='gaps'?'selected':''}>🔀 Fill gaps</option>
             <option value="hybrid" ${g.strategy==='hybrid'?'selected':''}>⚡ Hybrid</option>
           </select>
+          <span class="clabel">🔒 قفل الساعة (24h)</span>
+          <input class="cinput" style="width:66px" type="text" inputmode="numeric" placeholder="04:00" maxlength="5" value="${g.cutoff||''}" onchange="setGroupCutoff(${i},this)">
           <button class="cx" onclick="removeGroup(${i})">✕</button>
         </div>
       </div>
@@ -642,7 +659,7 @@ function runAnalysis(){
   });
 
   results=[];uploads=[];
-  let totalR=0,belowT=0,totalNeed=0,totalInvalid=0;
+  let totalR=0,belowT=0,totalNeed=0,totalInvalid=0,totalCapped=0;
 
   Object.entries(riderMap).forEach(([name,data])=>{
     totalR++;
@@ -754,6 +771,23 @@ function runAnalysis(){
     else if((strat==='hybrid'||strat==='gaps')&&remainNeeded>0) addSecOnLast=remainNeeded;
 
     const oldEnd=last.endT??0;
+
+    // cap by group's closing/cutoff time, if set
+    let cappedByClosing=false;
+    if(grp.cutoff){
+      const cutoffT=parseSec(grp.cutoff);
+      if(cutoffT!=null){
+        const startT=last.startT??0;
+        // cutoff belongs to the day after start if its clock time is earlier than shift start (e.g. 04:00 after an evening shift)
+        const cutoffDomain=cutoffT+(cutoffT<startT?86400:0);
+        const maxAdd=Math.max(0, cutoffDomain-oldEnd);
+        if(addSecOnLast>maxAdd){
+          cappedByClosing=true;
+          addSecOnLast=maxAdd;
+        }
+      }
+    }
+
     const newEnd=oldEnd+addSecOnLast;
     let newEndDate=last.startDate;
     if(addSecOnLast>0){
@@ -779,12 +813,16 @@ function runAnalysis(){
 
     const addSec=totalAddedSec+addSecOnLast;
     const displayNewEnd=addSecOnLast>0?newEnd:oldEnd;
+    const stillShort=cappedByClosing&&(data.total+addSec)<targetSec;
+    const remainingShort=stillShort?(targetSec-(data.total+addSec)):0;
+    if(stillShort) totalCapped++;
 
     results.push({name,empId:data.empId,shiftId:last.shiftId,spName:last.spName,spId:last.spId,
       total:data.total,target:targetSec,needed,addSec,
       startStr:toHHMM(last.startT),oldEndStr:toHHMM(oldEnd),newEndStr:toHHMM(displayNewEnd),
       startDate:last.startDate,endDate:newEndDate,
-      uploadCount:uploadRowsForRider.length});
+      uploadCount:uploadRowsForRider.length,
+      stillShort,remainingShort});
   });
 
   results.sort((a,b)=>a.total-b.total);
@@ -796,6 +834,7 @@ function runAnalysis(){
     <div class="stat-card"><div class="stat-lbl">ساعات ناقصة</div><div class="stat-val">${fmtH(totalNeed)}</div></div>
     <div class="stat-card"><div class="stat-lbl">Groups</div><div class="stat-val">${groups.length}</div></div>
     ${totalInvalid>0?`<div class="stat-card"><div class="stat-lbl">غير قابل للزيادة</div><div class="stat-val" style="color:var(--danger-text)">${totalInvalid}</div><div class="stat-sub">start_time مش على ربع ساعة</div></div>`:''}
+    ${totalCapped>0?`<div class="stat-card"><div class="stat-lbl">🔒 اتقفل عليهم الوقت</div><div class="stat-val" style="color:var(--danger-text)">${totalCapped}</div><div class="stat-sub">لسه ناقصين رغم القفل</div></div>`:''}
   `;
 
   // analysis tab
@@ -817,7 +856,7 @@ function runAnalysis(){
         <td><span class="pill pi">${fmtH(r.needed)}</span></td>
         <td>${r.startStr}</td>
         <td style="color:var(--text-secondary)">${r.oldEndStr}</td>
-        <td class="hnew">${r.addSec>0?r.newEndStr+( r.uploadCount>1?' <span class="pill ps">'+r.uploadCount+' صفوف</span>':''):'<span class="pill ps">OK</span>'}</td>`;
+        <td class="hnew">${r.addSec>0?r.newEndStr+( r.uploadCount>1?' <span class="pill ps">'+r.uploadCount+' صفوف</span>':'')+(r.stillShort?' <span class="pill pw">🔒 لسه ناقص '+fmtH(r.remainingShort)+'</span>':''):'<span class="pill ps">OK</span>'}</td>`;
       ta.appendChild(tr);
     });
   }
@@ -864,7 +903,7 @@ function loadSavedGroups(){
     if(!saved) return false;
     const parsed=JSON.parse(saved);
     if(!parsed||!parsed.length) return false;
-    groups=parsed.map(g=>({sps:new Set(g.sps),target:g.target||8,strategy:g.strategy||'extend'}));
+    groups=parsed.map(g=>({sps:new Set(g.sps),target:g.target||8,strategy:g.strategy||'extend',cutoff:g.cutoff||''}));
     return true;
   } catch(e){ return false; }
 }
