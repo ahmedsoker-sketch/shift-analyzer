@@ -897,10 +897,9 @@ function exportUpload(){
   if(!selected.length){alert('اختار صفوف الأول!');return;}
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
   const data=[hdrs,...selected.map(u=>hdrs.map(h=>u[h]??''))];
-  const ws=XLSX.utils.aoa_to_sheet(data);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Upload');
-  XLSX.writeFile(wb,'shift_upload_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_upload_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 function exportAnalysis(){
   if(!results.length)return;
