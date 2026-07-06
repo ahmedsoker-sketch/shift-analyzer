@@ -778,12 +778,32 @@ function runAnalysis(){
       const cutoffT=parseSec(grp.cutoff);
       if(cutoffT!=null){
         const startT=last.startT??0;
-        // cutoff belongs to the day after start if its clock time is earlier than shift start (e.g. 04:00 after an evening shift)
+        // For overnight shifts, oldEnd is stored as endT + 86400 if endT < startT
+        const oldEndNorm=(last.endT??0)+((last.endT??0)<startT?86400:0);
+        // Place cutoff in same domain: add 86400 if cutoff clock < startT
         const cutoffDomain=cutoffT+(cutoffT<startT?86400:0);
-        const maxAdd=Math.max(0, cutoffDomain-oldEnd);
-        if(addSecOnLast>maxAdd){
+        // if current end already at or beyond cutoff → cap at cutoff
+        if(oldEndNorm>=cutoffDomain){
           cappedByClosing=true;
-          addSecOnLast=maxAdd;
+          addSecOnLast=0;
+          const cappedEndDate=calcEndDate(last.startDate, last.startT, cutoffDomain);
+          uploadRowsForRider.push({
+            shift_id:last.shiftId,
+            adjustment_type:'UPDATE',
+            employee_id:data.empId,
+            starting_point_id:last.spId,
+            start_date:last.startDate,
+            end_date:cappedEndDate,
+            'start_time (local)':toHHMM(last.startT),
+            'end_time (local)':toHHMM(cutoffDomain),
+            shift_slots:''
+          });
+        } else {
+          const maxAdd=Math.max(0, cutoffDomain-oldEndNorm);
+          if(addSecOnLast>maxAdd){
+            cappedByClosing=true;
+            addSecOnLast=maxAdd;
+          }
         }
       }
     }
