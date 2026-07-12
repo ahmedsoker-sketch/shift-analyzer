@@ -9,7 +9,7 @@
 :root{
   --bg:#f7f7f5;--surface:#fff;--border:#e5e5e3;--border-strong:#d0d0cd;
   --text-primary:#1a1a18;--text-secondary:#6b6b68;--text-muted:#a0a09d;
-  --accent:#ff6b35;--accent-bg:#fff3ef;--accent-border:#ffc4ad;--accent-text:#c94a18;
+  --accent:#f05c23;--accent-bg:#fff1ec;--accent-border:#ffb49a;--accent-text:#c0390a;
   --success-bg:#edf7ed;--success-text:#2d7a2d;
   --warn-bg:#fff8e6;--warn-text:#b07800;
   --danger-bg:#fef0f0;--danger-text:#c0392b;
@@ -18,7 +18,7 @@
 [data-theme="dark"]{
   --bg:#181816;--surface:#232321;--border:#2e2e2b;--border-strong:#3d3d3a;
   --text-primary:#f0f0ec;--text-secondary:#a0a09d;--text-muted:#6b6b68;
-  --accent:#ff7d4d;--accent-bg:#2d1a12;--accent-border:#7a3420;--accent-text:#ff9870;
+  --accent:#ff7043;--accent-bg:#2a1508;--accent-border:#6a2010;--accent-text:#ff8060;
   --success-bg:#152215;--success-text:#5ab85a;
   --warn-bg:#221a08;--warn-text:#f0b429;
   --danger-bg:#1e1010;--danger-text:#e07070;
@@ -30,7 +30,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;ba
 .logo-dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
 .theme-btn{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;color:var(--text-secondary);font-size:12px;cursor:pointer}
 .main{max-width:1060px;margin:0 auto;padding:2rem 1.5rem}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;box-shadow:0 1px 4px rgba(0,0,0,.06)}
 .section-label{font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
 
 /* Drop zone */
@@ -120,14 +120,41 @@ tbody tr:hover{background:var(--bg)}
 .ps{background:var(--success-bg);color:var(--success-text)}
 .hnew{color:var(--accent-text);font-weight:600}
 .empty-r td{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:13px}
+
+  /* Progress steps */
+  .steps{display:flex;align-items:center;gap:0;margin-bottom:1.5rem;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-x:auto}
+  .step{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:all .3s;border:2px solid var(--border-strong);color:var(--text-muted);background:var(--bg)}
+  .step-label{font-size:12px;color:var(--text-muted);white-space:nowrap;transition:color .3s}
+  .step-line{flex:1;height:1px;background:var(--border);margin:0 8px;min-width:20px;transition:background .3s}
+  .step.active .step-circle{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.active .step-label{color:var(--accent-text);font-weight:600}
+  .step.done .step-circle{background:var(--success-bg);border-color:var(--success-text);color:var(--success-text)}
+  .step.done .step-label{color:var(--success-text)}
+  .step.done+.step-line,.step.active+.step-line{background:var(--accent)}
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="logo"><div class="logo-dot"></div>Shift Gap Analyzer</div>
+  <div style="display:flex;gap:4px">
+    <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Gap Analyzer</button>
+    <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
+  </div>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
 </div>
 <div class="main">
+<div id="section-analyzer">
+
+  <div class="steps" id="progress-steps">
+    <div class="step active" id="step-1"><div class="step-circle">1</div><span class="step-label">ارفع الملف</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="step-2"><div class="step-circle">2</div><span class="step-label">اختار التاريخ</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="step-3"><div class="step-circle">3</div><span class="step-label">حدد الـ Conditions</span></div>
+    <div class="step-line"></div>
+    <div class="step" id="step-4"><div class="step-circle">4</div><span class="step-label">حمّل الملف</span></div>
+  </div>
 
   <div class="drop-zone" id="dz" onclick="document.getElementById('file-input').click()">
     <span class="drop-icon">📂</span>
@@ -206,7 +233,42 @@ tbody tr:hover{background:var(--bg)}
       </div>
     </div>
   </div>
+</div><!-- end section-analyzer -->
+
+<!-- SHIFT CREATOR -->
+<div id="section-creator" style="display:none">
+  <div class="card" style="background:var(--warn-bg);border-color:var(--warn-text)">
+    <div style="font-size:13px;color:var(--warn-text)">⚠️ عشان أسماء النقط تظهر، ارفع ملف الشيفتات في تاب <b>Gap Analyzer</b> الأول — لو مش عاوز ترفع ملف، اكتب الـ ID يدوياً.</div>
+  </div>
+  <div class="card">
+    <div class="section-label">Shift Creator — إنشاء شيفتات جديدة</div>
+    <div id="sc-groups-list"></div>
+    <button class="add-grp-btn" onclick="addScGroup()" style="margin-bottom:1rem">+ إضافة group جديد</button>
+    <button class="run-btn" onclick="generateShifts()">▶ توليد الشيفتات</button>
+    <div class="err" id="sc-err" style="margin-top:10px;display:none"></div>
+  </div>
+  <div class="card" id="sc-results" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:15px;font-weight:600">الشيفتات الجديدة</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="badge badge-s" id="sc-count"></span>
+        <button class="exp-btn primary" onclick="exportCreator()">⬇ تحميل CSV</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto"><table dir="ltr" style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">shift_id</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">adjustment_type</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">employee_id</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">starting_point_id</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">start_date</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">end_date</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">start_time (local)</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">end_time (local)</th>
+      <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">shift_slots</th>
+    </tr></thead><tbody id="sc-tbody"></tbody></table></div>
+  </div>
 </div>
+</div><!-- end main -->
 
 <script>
 let rows=[], allSPs=[], selSPs=new Set(), groups=[], results=[], uploads=[], dark=false;
@@ -246,6 +308,7 @@ function loadFile(file){
       const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
       document.getElementById('date-filter').value=todayStr;
       document.getElementById('date-card').style.display='block';
+      updateSteps(2);
       document.getElementById('date-filter').addEventListener('change', ()=>{updateDateCount(); initSPs();});
       updateDateCount();
       initSPs();
@@ -302,6 +365,8 @@ function initSPs(){
   window._spNameToId=map;
   selSPs=new Set(allSPs);
   document.getElementById('cond-card').style.display='block';
+  refreshCreatorSPs();
+  updateSteps(3);
   document.getElementById('add-grp-btn').style.display='block';
   document.getElementById('save-btns').style.display='flex';
   // try load saved groups, else start fresh
@@ -315,9 +380,10 @@ function initSPs(){
 function toggleDD(){
   const m=document.getElementById('dd-menu');
   const t=document.getElementById('dd-trigger');
+  if(!m||!t) return;
   const open=m.classList.toggle('open');
   t.classList.toggle('open',open);
-  if(open) document.getElementById('dd-q').focus();
+  if(open){ const q=document.getElementById('dd-q'); if(q) q.focus(); }
 }
 function filterGrpDD(idx){
   const q=document.getElementById('grp-q-'+idx).value.toLowerCase();
@@ -951,6 +1017,7 @@ function toggleAllRows(){
   document.getElementById('toggle-all-btn').textContent=allChecked?'تحديد الكل':'إلغاء تحديد الكل';
 }
 function exportUpload(){
+  updateSteps(4);
   const checks=document.querySelectorAll('.row-check');
   const selected=uploads.filter((_,i)=>checks[i]?.checked);
   if(!selected.length){alert('اختار صفوف الأول!');return;}
@@ -968,6 +1035,147 @@ function exportAnalysis(){
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_analysis.csv';a.click();
 }
+// ── Shift Creator ──
+let scGroups=[];
+let scTimeOptions=[];
+
+function initTimeOptions(){
+  if(scTimeOptions.length) return;
+  for(let h=0;h<24;h++) for(let m=0;m<60;m+=15)
+    scTimeOptions.push(String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'));
+}
+
+function addScGroup(){
+  scGroups.push({spId:'',spName:'',startTime:'00:00',endTime:'08:00',ids:''});
+  renderScGroups();
+}
+
+function removeScGroup(idx){
+  scGroups.splice(idx,1);
+  renderScGroups();
+}
+
+function renderScGroups(){
+  initTimeOptions();
+  const list=document.getElementById('sc-groups-list');
+  list.innerHTML='';
+  if(!scGroups.length){
+    list.innerHTML='<div class="no-sp-msg" style="margin-bottom:1rem">اضغط "+ إضافة group جديد" للبدء</div>';
+    return;
+  }
+  scGroups.forEach((g,i)=>{
+    const timeOpts=scTimeOptions.map(t=>`<option value="${t}" ${g.startTime===t?'selected':''}>${t}</option>`).join('');
+    const timeOptsEnd=scTimeOptions.map(t=>`<option value="${t}" ${g.endTime===t?'selected':''}>${t}</option>`).join('');
+    const spOpts=window._spNameToId
+      ? '<option value="">-- اختار نقطة --</option>'+Object.entries(window._spNameToId).sort((a,b)=>a[0].localeCompare(b[0])).map(([n,id])=>`<option value="${id}" ${g.spId===id?'selected':''}>${n} (${id})</option>`).join('')
+      : `<option value="${g.spId}">${g.spId||'-- اختار نقطة --'}</option>`;
+
+    const div=document.createElement('div');
+    div.className='card';
+    div.style.cssText='margin-bottom:8px;padding:12px';
+    div.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-weight:600;font-size:13px">Group ${i+1}</span>
+        <button class="cx" onclick="removeScGroup(${i})">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Starting Point</label>
+          <select style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-bottom:4px" onchange="scGroups[${i}].spId=this.value">${spOpts}</select>
+          <input type="text" placeholder="أو ID يدوياً" value="${g.spId}" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].spId=this.value">
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Start Time</label>
+          <select style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].startTime=this.value">${timeOpts}</select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">End Time</label>
+          <select style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].endTime=this.value">${timeOptsEnd}</select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Employee IDs (كل ID في سطر)</label>
+        <textarea rows="4" placeholder="853383
+1234567" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;resize:vertical;font-family:monospace" onchange="scGroups[${i}].ids=this.value" oninput="scGroups[${i}].ids=this.value">${g.ids}</textarea>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function showSection(name){
+  document.getElementById('section-analyzer').style.display=name==='analyzer'?'block':'none';
+  document.getElementById('section-creator').style.display=name==='creator'?'block':'none';
+  document.getElementById('nav-analyzer').style.cssText=name==='analyzer'?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
+  document.getElementById('nav-creator').style.cssText=name==='creator'?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
+  if(name==='creator') initCreator();
+}
+function refreshCreatorSPs(){
+  const spSel=document.getElementById('sc-sp');
+  if(!spSel||!window._spNameToId) return;
+  const cur=spSel.value;
+  spSel.innerHTML='<option value="">-- اختار نقطة --</option>';
+  Object.entries(window._spNameToId).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([name,id])=>{
+    spSel.add(new Option(name+' ('+id+')', id));
+  });
+  if(cur) spSel.value=cur;
+}
+function initCreator(){
+  initTimeOptions();
+  if(!scGroups.length) renderScGroups();
+  else renderScGroups();
+}
+function scSpChanged(){}
+function generateShifts(){
+  const errEl=document.getElementById('sc-err');
+  errEl.style.display='none';
+  if(!scGroups.length){errEl.textContent='أضف group واحد على الأقل';errEl.style.display='block';return;}
+  const today=new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  const tbody=document.getElementById('sc-tbody');
+  tbody.innerHTML='';
+  scRows=[];
+  scGroups.forEach((g,gi)=>{
+    const spId=g.spId.trim();
+    const startTime=g.startTime;
+    const endTime=g.endTime;
+    const ids=[...new Set(g.ids.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean))];
+    if(!spId||!ids.length) return;
+    const startSec=+startTime.split(':')[0]*3600+ +startTime.split(':')[1]*60;
+    const endSec=+endTime.split(':')[0]*3600+ +endTime.split(':')[1]*60;
+    let startDate=todayStr, endDate=todayStr;
+    if(endSec<=startSec){const d=new Date(todayStr+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1);endDate=d.toISOString().slice(0,10);}
+    ids.forEach(id=>{
+      const row={shift_id:'',adjustment_type:'CREATE',employee_id:id,starting_point_id:spId,start_date:startDate,end_date:endDate,'start_time (local)':startTime,'end_time (local)':endTime,shift_slots:''};
+      scRows.push(row);
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">CREATE</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${id}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${spId}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${endDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent-text);font-weight:600">${endTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td>`;
+      tbody.appendChild(tr);
+    });
+  });
+  if(!scRows.length){errEl.textContent='مفيش بيانات كافية — تأكد إن كل group فيه SP وIDs';errEl.style.display='block';return;}
+  document.getElementById('sc-count').textContent=scRows.length+' شيفت';
+  document.getElementById('sc-results').style.display='block';
+}
+let scRows=[];
+function exportCreator(){
+  if(!scRows.length)return;
+  const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
+  const data=[hdrs,...scRows.map(r=>hdrs.map(h=>r[h]??''))];
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_create_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── Progress Steps ──
+function updateSteps(active){
+  // active: 1,2,3,4
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('step-'+i);
+    if(!el) continue;
+    el.className='step'+(i<active?' done':i===active?' active':'');
+  }
+}
+
 </script>
 </body>
 </html>
