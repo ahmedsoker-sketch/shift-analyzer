@@ -259,6 +259,10 @@ tbody tr:hover{background:var(--bg)}
         <button class="exp-btn primary" onclick="exportCreator()">⬇ تحميل CSV</button>
       </div>
     </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px" id="sc-breakdown"></div>
+    <div style="display:flex;gap:8px;align-items:center">
+      </div>
+    </div>
     <div style="overflow-x:auto"><table dir="ltr" style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr>
       <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">shift_id</th>
       <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">adjustment_type</th>
@@ -1180,6 +1184,22 @@ function generateShifts(){
   });
   if(!scRows.length){errEl.textContent='مفيش بيانات كافية — تأكد إن كل group فيه SP وIDs';errEl.style.display='block';return;}
   document.getElementById('sc-count').textContent=scRows.length+' شيفت';
+  // build breakdown per SP
+  const breakdown={};
+  scGroups.forEach(g=>{
+    if(!g.spId) return;
+    const spName=window._spNameToId?Object.entries(window._spNameToId).find(([n,id])=>id===g.spId)?.[0]||g.spId:g.spId;
+    const ids=[...new Set(g.ids.split(/[\n,]+/).map(s=>s.trim()).filter(Boolean))];
+    if(!ids.length) return;
+    const key=spName+' ('+g.spId+')';
+    if(!breakdown[key]) breakdown[key]={ids:new Set(),days:g.days||1};
+    ids.forEach(id=>breakdown[key].ids.add(id));
+    breakdown[key].days=Math.max(breakdown[key].days, g.days||1);
+  });
+  const bdEl=document.getElementById('sc-breakdown');
+  bdEl.innerHTML=Object.entries(breakdown).map(([name,{ids,days}])=>
+    `<span style="font-size:12px;color:var(--text-secondary);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">${name}: <b>${ids.size} ID</b> × ${days} يوم</span>`
+  ).join('');
   document.getElementById('sc-results').style.display='block';
 }
 let scRows=[];
