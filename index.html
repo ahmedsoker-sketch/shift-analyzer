@@ -243,7 +243,11 @@ tbody tr:hover{background:var(--bg)}
   <div class="card">
     <div class="section-label">Shift Creator — إنشاء شيفتات جديدة</div>
     <div id="sc-groups-list"></div>
-    <button class="add-grp-btn" onclick="addScGroup()" style="margin-bottom:1rem">+ إضافة group جديد</button>
+    <button class="add-grp-btn" onclick="addScGroup()" style="margin-bottom:8px">+ إضافة group جديد</button>
+    <div style="display:flex;gap:8px;margin-bottom:1rem">
+      <button class="exp-btn" onclick="saveScGroups()" style="flex:1">💾 حفظ الإعدادات</button>
+      <button class="exp-btn" onclick="clearScGroups()" style="color:var(--danger-text)">🗑 مسح المحفوظ</button>
+    </div>
     <button class="run-btn" onclick="generateShifts()">▶ توليد الشيفتات</button>
     <div class="err" id="sc-err" style="margin-top:10px;display:none"></div>
   </div>
@@ -1066,9 +1070,8 @@ function renderScGroups(){
   scGroups.forEach((g,i)=>{
     const timeOpts=scTimeOptions.map(t=>`<option value="${t}" ${g.startTime===t?'selected':''}>${t}</option>`).join('');
     const timeOptsEnd=scTimeOptions.map(t=>`<option value="${t}" ${g.endTime===t?'selected':''}>${t}</option>`).join('');
-    const spOpts=window._spNameToId
-      ? '<option value="">-- اختار نقطة --</option>'+Object.entries(window._spNameToId).sort((a,b)=>a[0].localeCompare(b[0])).map(([n,id])=>`<option value="${id}" ${g.spId===id?'selected':''}>${n} (${id})</option>`).join('')
-      : `<option value="${g.spId}">${g.spId||'-- اختار نقطة --'}</option>`;
+    const spName=window._spNameToId ? Object.entries(window._spNameToId).find(([n,id])=>id===g.spId)?.[0]||'' : '';
+    const spLabel=spName?spName+' ('+g.spId+')': (g.spId||'اختار نقطة...');
 
     const div=document.createElement('div');
     div.className='card';
@@ -1081,8 +1084,17 @@ function renderScGroups(){
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
           <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Starting Point</label>
-          <select style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-bottom:4px" onchange="scGroups[${i}].spId=this.value">${spOpts}</select>
-          <input type="text" placeholder="أو ID يدوياً" value="${g.spId}" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].spId=this.value">
+          <div class="dropdown-wrap" style="position:relative">
+            <div class="dd-trigger" id="sc-tr-${i}" onclick="toggleScDD(${i});event.stopPropagation()" style="font-size:12px;padding:7px 10px">
+              <span id="sc-tr-lbl-${i}">${spLabel}</span>
+              <span class="dd-arrow">▼</span>
+            </div>
+            <div class="dd-menu" id="sc-dd-${i}" style="z-index:300">
+              <div class="dd-search"><input type="text" placeholder="بحث..." id="sc-q-${i}" oninput="filterScDD(${i})" onclick="event.stopPropagation()" style="width:100%;border:none;background:transparent;outline:none;font-size:13px;color:var(--text-primary)"></div>
+              <div id="sc-dd-items-${i}"></div>
+            </div>
+          </div>
+          <input type="text" placeholder="أو ID يدوياً" value="${g.spId}" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-top:4px" oninput="scGroups[${i}].spId=this.value;document.getElementById('sc-tr-lbl-${i}').textContent=this.value||'اختار نقطة...'">
         </div>
         <div>
           <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Start Time</label>
@@ -1121,8 +1133,8 @@ function refreshCreatorSPs(){
 }
 function initCreator(){
   initTimeOptions();
-  if(!scGroups.length) renderScGroups();
-  else renderScGroups();
+  if(!scGroups.length) loadScGroups();
+  renderScGroups();
 }
 function scSpChanged(){}
 function generateShifts(){
@@ -1164,6 +1176,75 @@ function exportCreator(){
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_create_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+// ── SC Dropdown ──
+function toggleScDD(idx){
+  document.querySelectorAll('.dd-menu').forEach((m,i)=>{
+    const scId='sc-dd-'+idx;
+    if(m.id!==scId) m.classList.remove('open');
+  });
+  const menu=document.getElementById('sc-dd-'+idx);
+  const trigger=document.getElementById('sc-tr-'+idx);
+  if(!menu||!trigger) return;
+  const open=menu.classList.toggle('open');
+  trigger.classList.toggle('open',open);
+  if(open){
+    populateScDD(idx);
+    setTimeout(()=>{ const q=document.getElementById('sc-q-'+idx); if(q) q.focus(); },50);
+  }
+}
+function populateScDD(idx){
+  const container=document.getElementById('sc-dd-items-'+idx);
+  if(!container) return;
+  const q=document.getElementById('sc-q-'+idx)?.value.toLowerCase()||'';
+  container.innerHTML='';
+  if(!window._spNameToId){ container.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text-muted)">ارفع ملف في Gap Analyzer أول</div>'; return; }
+  Object.entries(window._spNameToId).sort((a,b)=>a[0].localeCompare(b[0])).filter(([n])=>n.toLowerCase().includes(q)).forEach(([name,id])=>{
+    const chk=scGroups[idx]?.spId===id;
+    const d=document.createElement('div');
+    d.className='dd-item'+(chk?' checked':'');
+    d.innerHTML=`<div class="dd-check">${chk?'✓':''}</div><span>${name} (${id})</span>`;
+    d.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(scGroups[idx]) scGroups[idx].spId=id;
+      const lbl=document.getElementById('sc-tr-lbl-'+idx);
+      if(lbl) lbl.textContent=name+' ('+id+')';
+      // update manual input
+      const inputs=document.getElementById('sc-dd-'+idx)?.closest('.card')?.querySelectorAll('input[type=text]');
+      if(inputs?.[0]) inputs[0].value=id;
+      document.getElementById('sc-dd-'+idx)?.classList.remove('open');
+      document.getElementById('sc-tr-'+idx)?.classList.remove('open');
+    });
+    container.appendChild(d);
+  });
+}
+function filterScDD(idx){
+  populateScDD(idx);
+}
+
+// ── SC Save/Load ──
+function saveScGroups(){
+  const toSave=scGroups.map(g=>({spId:g.spId,startTime:g.startTime,endTime:g.endTime,ids:g.ids}));
+  localStorage.setItem('shiftCreatorGroups', JSON.stringify(toSave));
+  const btn=event.target;
+  btn.textContent='✅ تم الحفظ!';
+  setTimeout(()=>btn.textContent='💾 حفظ الإعدادات',2000);
+}
+function loadScGroups(){
+  try{
+    const saved=localStorage.getItem('shiftCreatorGroups');
+    if(!saved) return false;
+    const parsed=JSON.parse(saved);
+    if(!parsed?.length) return false;
+    scGroups=parsed.map(g=>({spId:g.spId||'',startTime:g.startTime||'00:00',endTime:g.endTime||'08:00',ids:g.ids||''}));
+    return true;
+  } catch(e){ return false; }
+}
+function clearScGroups(){
+  localStorage.removeItem('shiftCreatorGroups');
+  scGroups=[];
+  renderScGroups();
 }
 
 // ── Progress Steps ──
