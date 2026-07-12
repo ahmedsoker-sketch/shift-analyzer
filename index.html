@@ -1227,7 +1227,7 @@ function generateShifts(){
   });
   const bdEl=document.getElementById('sc-breakdown');
   bdEl.innerHTML=Object.entries(breakdown).map(([name,{ids,days}])=>
-    `<span style="font-size:12px;color:var(--text-secondary);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">${name}: <b>${ids.size} ID</b> × ${days} يوم</span>`
+    `<span style="font-size:12px;color:var(--text-secondary);background:var(--bg);padding:3px 10px;border-radius:20px;border:1px solid var(--border)">${name}: <b>${ids.size} ID</b> × ${days} Days</span>`
   ).join('');
   document.getElementById('sc-results').style.display='block';
 }
