@@ -148,6 +148,7 @@ tbody tr:hover{background:var(--bg)}
   <div style="display:flex;gap:4px">
     <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Bulk Extensions</button>
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
+    <button class="theme-btn" id="nav-requests" onclick="showSection('requests')">📬 Extend Requests</button>
   </div>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
 </div>
@@ -305,6 +306,101 @@ tbody tr:hover{background:var(--bg)}
     </tr></thead><tbody id="sc-tbody"></tbody></table></div>
   </div>
 </div>
+<div id="section-requests" style="display:none">
+  <div class="card">
+    <div class="section-label">Extend Requests — تزويد بناءً على ريكويستات</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:6px">📋 ملف الشيفتات (نفس ملف Gap Analyzer)</label>
+        <div class="drop-zone" id="dz-req-shifts" onclick="document.getElementById('fi-req-shifts').click()" style="padding:1rem;font-size:13px">
+          <span id="dz-req-shifts-icon" class="drop-icon" style="font-size:20px;margin-bottom:4px">📂</span>
+          اسحب ملف الشيفتات هنا
+          <div id="dz-req-shifts-name" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
+        </div>
+        <input type="file" id="fi-req-shifts" accept=".csv,.xlsx,.xls" style="display:none">
+      </div>
+      <div>
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:6px">📬 ملف الريكويستات (فيه Rider ID والوقت المطلوب)</label>
+        <div class="drop-zone" id="dz-req-requests" onclick="document.getElementById('fi-req-requests').click()" style="padding:1rem;font-size:13px">
+          <span id="dz-req-requests-icon" class="drop-icon" style="font-size:20px;margin-bottom:4px">📂</span>
+          اسحب ملف الريكويستات هنا
+          <div id="dz-req-requests-name" style="font-size:11px;margin-top:4px;color:var(--text-muted)"></div>
+        </div>
+        <input type="file" id="fi-req-requests" accept=".csv,.xlsx,.xls" style="display:none">
+      </div>
+    </div>
+    <button class="run-btn" onclick="runExtendRequests()">▶ توليد ملف التزويد</button>
+    <div class="err" id="req-err" style="margin-top:10px;display:none"></div>
+  </div>
+
+  <div class="card" id="req-results" style="display:none">
+    <div class="tabs">
+      <button class="tab active" onclick="switchReqTab('output',this)">📋 ملف التزويد <span class="badge badge-s" id="req-count" style="margin-right:6px"></span></button>
+      <button class="tab" onclick="switchReqTab('skipped',this)">⚠️ تم تجاهله <span class="badge" id="req-skip-count" style="background:var(--warn-bg);color:var(--warn-text);margin-right:6px"></span></button>
+      <button class="tab" onclick="switchReqTab('filtered',this)">✅ منجز مسبقاً <span class="badge" id="req-filtered-count" style="background:var(--success-bg);color:var(--success-text);margin-right:6px"></span></button>
+    </div>
+
+    <!-- ملف التزويد -->
+    <div id="req-tab-output" class="tab-panel active">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="exp-btn primary" onclick="exportRequests()">⬇ تحميل CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table dir="ltr" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">shift_id</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">adjustment_type</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">employee_id</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">starting_point_id</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">start_date</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">end_date</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">start_time (local)</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">end_time (local)</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">shift_slots</th>
+          </tr></thead>
+          <tbody id="req-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- تم تجاهله -->
+    <div id="req-tab-skipped" class="tab-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:var(--text-secondary)">الريكويستات دي اتتجاهلت — إما مفيش شيفت نشط للـ Rider أو الوقت مش واضح</div>
+        <button class="exp-btn" onclick="exportSkipped()">⬇ تحميل CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table dir="ltr" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">rider_id</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">الوقت المطلوب</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">سبب التجاهل</th>
+          </tr></thead>
+          <tbody id="req-skipped-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- منجز مسبقاً -->
+    <div id="req-tab-filtered" class="tab-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:12px;color:var(--text-secondary)">الريكويستات دي حالتها مش "قيد الإنتظار" — يعني اتعمل بيها حاجة مسبقاً</div>
+        <button class="exp-btn" onclick="exportFiltered()">⬇ تحميل CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table dir="ltr" style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">rider_id</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">الوقت المطلوب</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--bg)">الحالة</th>
+          </tr></thead>
+          <tbody id="req-filtered-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
 </div><!-- end main -->
 
 <script>
@@ -1154,10 +1250,14 @@ function renderScGroups(){
 }
 
 function showSection(name){
-  document.getElementById('section-analyzer').style.display=name==='analyzer'?'block':'none';
-  document.getElementById('section-creator').style.display=name==='creator'?'block':'none';
-  document.getElementById('nav-analyzer').style.cssText=name==='analyzer'?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
-  document.getElementById('nav-creator').style.cssText=name==='creator'?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
+  ['analyzer','creator','requests'].forEach(s=>{
+    const el=document.getElementById('section-'+s);
+    if(el) el.style.display=name===s?'block':'none';
+  });
+  ['analyzer','creator','requests'].forEach(s=>{
+    const btn=document.getElementById('nav-'+s);
+    if(btn) btn.style.cssText=name===s?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
+  });
   if(name==='creator') initCreator();
 }
 function refreshCreatorSPs(){
@@ -1318,6 +1418,282 @@ function updateSteps(active){
     if(!el) continue;
     el.className='step'+(i<active?' done':i===active?' active':'');
   }
+}
+
+// ── Extend Requests ──
+let reqShiftsRows=[], reqRequestRows=[], reqOutputRows=[];
+
+function loadReqFile(fileInput, dzId, nameId, iconId, storeKey){
+  const file=fileInput.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      // try UTF-8 text decode first for CSV files (Google Sheets export)
+      let wb;
+      const fileName=(fileInput.files[0]||{}).name||'';
+      if(fileName.toLowerCase().endsWith('.csv')){
+        const text=new TextDecoder('utf-8').decode(new Uint8Array(ev.target.result));
+        wb=XLSX.read(text,{type:'string'});
+      } else {
+        wb=XLSX.read(ev.target.result,{type:'array'});
+      }
+      const data=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',header:1});
+      if(storeKey==='shifts') reqShiftsRows=data;
+      else reqRequestRows=data;
+      document.getElementById(iconId).textContent='✅';
+      document.getElementById(nameId).textContent=file.name+' — '+(data.length-1)+' صف';
+      document.getElementById(dzId).classList.add('loaded');
+    }catch(e){ alert('تعذر قراءة الملف'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('fi-req-shifts').addEventListener('change',e=>loadReqFile(e.target,'dz-req-shifts','dz-req-shifts-name','dz-req-shifts-icon','shifts'));
+  document.getElementById('fi-req-requests').addEventListener('change',e=>loadReqFile(e.target,'dz-req-requests','dz-req-requests-name','dz-req-requests-icon','requests'));
+  ['dz-req-shifts','dz-req-requests'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('hover')});
+    el.addEventListener('dragleave',()=>el.classList.remove('hover'));
+    el.addEventListener('drop',e=>{
+      e.preventDefault();el.classList.remove('hover');
+      const key=id.includes('shifts')?'shifts':'requests';
+      const fi=document.getElementById(id.includes('shifts')?'fi-req-shifts':'fi-req-requests');
+      const dt=new DataTransfer();dt.items.add(e.dataTransfer.files[0]);fi.files=dt.files;
+      loadReqFile(fi,id,id+'-name',id+'-icon',key);
+    });
+  });
+});
+
+function parseArabicTime(text){
+  if(!text) return null;
+  text=String(text).trim();
+  const match=text.match(/(\d{1,2}):(\d{2})/);
+  if(!match) return null;
+  let h=parseInt(match[1]), m=parseInt(match[2]);
+
+  const isAM=/صباح|الصبح|فجر|الفجر/.test(text);
+  const isMidnight=/بليل|بالليل|ليل|الليل/.test(text);
+  const isPM=/مساء|مغرب|المغرب|عشا|العشا|عصر|العصر|ضهر|الضهر|ظهر|الظهر/.test(text);
+
+  if(isMidnight){
+    if(h===12) h=0;
+    else h+=12;
+  } else if(isPM){
+    if(h!==12) h+=12;
+    // h===12 (noon) stays 12
+  } else if(isAM){
+    if(h===12) h=0;
+  }
+  // no keyword → take as-is (24h)
+
+  if(h>=24) h=h-24;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+
+function runExtendRequests(){
+  const errEl=document.getElementById('req-err');
+  errEl.style.display='none';
+  if(!reqShiftsRows.length){errEl.textContent='ارفع ملف الشيفتات أول';errEl.style.display='block';return;}
+  if(!reqRequestRows.length){errEl.textContent='ارفع ملف الريكويستات أول';errEl.style.display='block';return;}
+
+  const norm=s=>s.toLowerCase().replace(/[\s_\-()]/g,'');
+
+  // detect shifts file columns
+  const shiftHeaders=reqShiftsRows[0].map(h=>String(h||''));
+  const sIdCol    =shiftHeaders.findIndex(h=>norm(h)==='shiftid'||norm(h).includes('shiftid'));
+  const sEmpCol   =shiftHeaders.findIndex(h=>norm(h)==='employeeid'||norm(h).includes('employeeid'));
+  const sSPCol    =shiftHeaders.findIndex(h=>/startingpointid/i.test(norm(h))&&!norm(h).includes('name'));
+  const sStartD   =shiftHeaders.findIndex(h=>norm(h).includes('plannedstartdate')||norm(h).includes('startdate'));
+  const sEndD     =shiftHeaders.findIndex(h=>norm(h).includes('plannedenddate')||norm(h).includes('enddate'));
+  const sStartT   =shiftHeaders.findIndex(h=>norm(h).includes('plannedstarttime')||norm(h).includes('starttime'));
+  const sEndT     =shiftHeaders.findIndex(h=>norm(h).includes('plannedendtime')||norm(h).includes('endtime'));
+  const sDur      =shiftHeaders.findIndex(h=>norm(h).includes('duration'));
+
+  // build map: empId → last active shift
+  const nowCairo=new Date(new Date().toLocaleString('en-US',{timeZone:'Africa/Cairo'}));
+  const nowSec=nowCairo.getHours()*3600+nowCairo.getMinutes()*60;
+  const todayStr=nowCairo.getFullYear()+'-'+String(nowCairo.getMonth()+1).padStart(2,'0')+'-'+String(nowCairo.getDate()).padStart(2,'0');
+
+  function parseSec2(v){
+    if(!v&&v!==0)return null;
+    if(typeof v==='number')return Math.round(v*86400);
+    const p=String(v).trim().split(':');
+    if(p.length>=2)return +p[0]*3600+ +p[1]*60;
+    return null;
+  }
+  function fmtDate2(v){
+    if(!v)return '';
+    if(typeof v==='number'){const d=new Date(Math.round((v-25569)*86400*1000));return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+    return String(v).trim().slice(0,10);
+  }
+  function toHHMM2(s){if(s==null)return '';s=((Math.round(s)%86400)+86400)%86400;return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0');}
+
+  const empShiftMap={};
+  for(let i=1;i<reqShiftsRows.length;i++){
+    const row=reqShiftsRows[i];
+    const empId=String(row[sEmpCol]||'').trim();
+    if(!empId) continue;
+    const startT=parseSec2(row[sStartT]);
+    const endT=parseSec2(row[sEndT]);
+    const startDate=fmtDate2(row[sStartD]);
+    const endDate=fmtDate2(row[sEndD]);
+    // abs end
+    const baseAbs=startDate?new Date(startDate+'T00:00:00Z').getTime()/1000:0;
+    const absEnd=baseAbs+(endT??0)+((endT??0)<(startT??0)?86400:0);
+    const absNow=new Date(todayStr+'T00:00:00Z').getTime()/1000+nowSec;
+    if(absEnd<=absNow) continue; // already ended
+    if(!empShiftMap[empId]||absEnd>empShiftMap[empId].absEnd){
+      empShiftMap[empId]={
+        shiftId:String(row[sIdCol]||'').trim(),
+        spId:String(row[sSPCol]||'').trim(),
+        startDate,endDate,
+        startT,endT,absEnd,
+        startTStr:toHHMM2(startT),endTStr:toHHMM2(endT)
+      };
+    }
+  }
+
+  // detect requests file columns — E=col4(0-indexed), F=col5
+  // use header row to find or fallback to index 4,5
+  const reqHeaders=reqRequestRows[0].map(h=>String(h||''));
+  let timeCol=-1, idCol=5;
+  const riderIdx=reqHeaders.findIndex(h=>/rider.?id|employee.?id/i.test(h));
+  if(riderIdx>=0) idCol=riderIdx;
+  // detect time column — دور على عمود فيه "وقت" أو "time"
+  timeCol=reqHeaders.findIndex(h=>/وقت|time/i.test(String(h)) && !/حالة|status/i.test(String(h)));
+  if(timeCol<0) timeCol=4;
+
+  // حالة الطلب دايما في العمود H (index 7)
+  const statusCol=7;
+
+  const tbody=document.getElementById('req-tbody');
+  tbody.innerHTML='';
+  reqOutputRows=[];
+  _skippedRows=[]; _filteredRows=[];
+  const skippedRows=_skippedRows, filteredRows=_filteredRows;
+  let skipped=0, filteredOut=0;
+
+  for(let i=1;i<reqRequestRows.length;i++){
+    const row=reqRequestRows[i];
+
+    // فلتر حالة الطلب — بس "قيد الإنتظار"
+    if(statusCol>=0){
+      const status=String(row[statusCol]||'').trim();
+      const normStatus=status.replace(/[إأآا]/g,'ا');
+      if(status && normStatus!=='قيد الانتظار'){
+        filteredOut++;
+        filteredRows.push({riderId:String(row[idCol]||'').trim(), timeRaw:String(row[timeCol]||'').trim(), status});
+        continue;
+      }
+    }
+
+    const timeRaw=String(row[timeCol]||'').trim();
+    const riderId=String(row[idCol]||'').trim();
+    if(!riderId) continue;
+    const newEndTime=parseArabicTime(timeRaw);
+    if(!newEndTime){skipped++;skippedRows.push({riderId,timeRaw,reason:'الوقت مش واضح'});continue;}
+    const shift=empShiftMap[riderId];
+    if(!shift){skipped++;skippedRows.push({riderId,timeRaw,reason:'مفيش شيفت نشط'});continue;}
+    // calc new end_date
+    const newEndSec=+newEndTime.split(':')[0]*3600+ +newEndTime.split(':')[1]*60;
+    let newEndDate=shift.startDate;
+    if(newEndSec<=shift.startT){
+      const d=new Date(shift.startDate+'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate()+1);
+      newEndDate=d.toISOString().slice(0,10);
+    }
+    const outRow={shift_id:shift.shiftId,adjustment_type:'UPDATE',employee_id:riderId,
+      starting_point_id:shift.spId,start_date:shift.startDate,end_date:newEndDate,
+      'start_time (local)':shift.startTStr,'end_time (local)':newEndTime,shift_slots:''};
+    reqOutputRows.push(outRow);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.shiftId}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">UPDATE</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${riderId}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.spId}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.startDate}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${newEndDate}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.startTStr}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent-text);font-weight:600">${newEndTime}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td>`;
+    tbody.appendChild(tr);
+  }
+
+  document.getElementById('req-count').textContent=reqOutputRows.length+' صف';
+  document.getElementById('req-skip-count').textContent=skipped?skipped+' تم تجاهله':'';
+  document.getElementById('req-skip-count').style.display=skipped?'inline-block':'none';
+  document.getElementById('req-filtered-count').textContent=filteredOut?filteredOut+' منجز مسبقاً':'';
+  document.getElementById('req-filtered-count').style.display=filteredOut?'inline-block':'none';
+
+  // fill skipped tab
+  const skTbody=document.getElementById('req-skipped-tbody');
+  skTbody.innerHTML='';
+  if(skippedRows.length===0){
+    skTbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted)">مفيش صفوف اتتجاهلت ✅</td></tr>';
+  } else {
+    skippedRows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${r.riderId}</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${r.timeRaw}</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--warn-text)">${r.reason}</td>`;
+      skTbody.appendChild(tr);
+    });
+  }
+
+  // fill filtered tab
+  const filtTbody=document.getElementById('req-filtered-tbody');
+  filtTbody.innerHTML='';
+  if(filteredRows.length===0){
+    filtTbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:2rem;color:var(--text-muted)">مفيش منجز مسبقاً</td></tr>';
+  } else {
+    filteredRows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${r.riderId}</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${r.timeRaw}</td>
+        <td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--success-text)">${r.status}</td>`;
+      filtTbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('req-results').style.display='block';
+}
+
+function switchReqTab(t,btn){
+  document.querySelectorAll('#req-results .tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#req-results .tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('req-tab-'+t).classList.add('active');
+  btn.classList.add('active');
+}
+
+let _skippedRows=[], _filteredRows=[];
+
+function exportSkipped(){
+  if(!_skippedRows.length)return;
+  const hdrs=['rider_id','الوقت المطلوب','سبب التجاهل'];
+  const data=[hdrs,..._skippedRows.map(r=>[r.riderId,r.timeRaw,r.reason])];
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skipped_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+function exportFiltered(){
+  if(!_filteredRows.length)return;
+  const hdrs=['rider_id','الوقت المطلوب','الحالة'];
+  const data=[hdrs,..._filteredRows.map(r=>[r.riderId,r.timeRaw,r.status])];
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='processed_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+function exportRequests(){
+  if(!reqOutputRows.length)return;
+  const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
+  const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>r[h]??''))];
+  const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='extend_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 
 </script>
