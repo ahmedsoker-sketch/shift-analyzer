@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shift Gap Analyzer</title>
+<title>Shift Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -136,9 +136,9 @@ tbody tr:hover{background:var(--bg)}
 </head>
 <body>
 <div class="topbar">
-  <div class="logo"><div class="logo-dot"></div>Shift Gap Analyzer</div>
+  <div class="logo"><div class="logo-dot"></div>Shift Analyzer</div>
   <div style="display:flex;gap:4px">
-    <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Gap Analyzer</button>
+    <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Bulk Extensions</button>
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
   </div>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
@@ -235,7 +235,7 @@ tbody tr:hover{background:var(--bg)}
   </div>
 </div><!-- end section-analyzer -->
 
-<!-- SHIFT CREATOR -->
+<!-- SHIFT CREATOR-For Hybrid -->
 <div id="section-creator" style="display:none">
   <div class="card" style="background:var(--warn-bg);border-color:var(--warn-text)">
     <div style="font-size:13px;color:var(--warn-text)">⚠️ عشان أسماء النقط تظهر، ارفع ملف الشيفتات في تاب <b>Gap Analyzer</b> الأول — لو مش عاوز ترفع ملف، اكتب الـ ID يدوياً.</div>
