@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shift Gap Analyzer</title>
+<title>Shift Analyzer</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -259,7 +259,7 @@ tbody tr:hover{background:var(--bg)}
 <!-- SHIFT CREATOR -->
 <div id="section-creator" style="display:none">
   <div class="card" style="background:var(--warn-bg);border-color:var(--warn-text)">
-    <div style="font-size:13px;color:var(--warn-text)">⚠️ عشان أسماء النقط تظهر، ارفع ملف الشيفتات في تاب <b>Gap Analyzer</b> الأول — لو مش عاوز ترفع ملف، اكتب الـ ID يدوياً.</div>
+    <div style="font-size:13px;color:var(--warn-text)">⚠️ عشان أسماء النقط تظهر، ارفع ملف الشيفتات في تاب <b>Bulk Extensions</b> الأول — لو مش عاوز ترفع ملف، اكتب الـ SP ID يدوياً.</div>
   </div>
   <div class="card">
     <div class="section-label">Shift Creator — إنشاء شيفتات جديدة</div>
@@ -1254,7 +1254,7 @@ function populateScDD(idx){
   if(!container) return;
   const q=document.getElementById('sc-q-'+idx)?.value.toLowerCase()||'';
   container.innerHTML='';
-  if(!window._spNameToId){ container.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text-muted)">ارفع ملف في Gap Analyzer أول</div>'; return; }
+  if(!window._spNameToId){ container.innerHTML='<div style="padding:10px;font-size:12px;color:var(--text-muted)">ارفع ملف في Bulk Extensions أول</div>'; return; }
   Object.entries(window._spNameToId).sort((a,b)=>a[0].localeCompare(b[0])).filter(([n])=>n.toLowerCase().includes(q)).forEach(([name,id])=>{
     const chk=scGroups[idx]?.spId===id;
     const d=document.createElement('div');
