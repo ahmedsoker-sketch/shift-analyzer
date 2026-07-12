@@ -1050,7 +1050,7 @@ function initTimeOptions(){
 }
 
 function addScGroup(){
-  scGroups.push({spId:'',spName:'',startTime:'00:00',endTime:'08:00',ids:''});
+  scGroups.push({spId:'',spName:'',startTime:'00:00',endTime:'08:00',ids:'',startDate:'',days:1});
   renderScGroups();
 }
 
@@ -1081,7 +1081,7 @@ function renderScGroups(){
         <span style="font-weight:600;font-size:13px">Group ${i+1}</span>
         <button class="cx" onclick="removeScGroup(${i})">✕</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-bottom:10px">
         <div>
           <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Starting Point</label>
           <div class="dropdown-wrap" style="position:relative">
@@ -1103,6 +1103,12 @@ function renderScGroups(){
         <div>
           <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">End Time</label>
           <select style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].endTime=this.value">${timeOptsEnd}</select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Start Date</label>
+          <input type="date" value="${g.startDate||''}" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-bottom:4px" onchange="scGroups[${i}].startDate=this.value">
+          <input type="number" min="1" max="30" value="${g.days||1}" placeholder="عدد الأيام" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none" onchange="scGroups[${i}].days=+this.value">
+          <span style="font-size:11px;color:var(--text-muted)">عدد الأيام</span>
         </div>
       </div>
       <div>
@@ -1154,15 +1160,23 @@ function generateShifts(){
     if(!spId||!ids.length) return;
     const startSec=+startTime.split(':')[0]*3600+ +startTime.split(':')[1]*60;
     const endSec=+endTime.split(':')[0]*3600+ +endTime.split(':')[1]*60;
-    let startDate=todayStr, endDate=todayStr;
-    if(endSec<=startSec){const d=new Date(todayStr+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1);endDate=d.toISOString().slice(0,10);}
-    ids.forEach(id=>{
-      const row={shift_id:'',adjustment_type:'CREATE',employee_id:id,starting_point_id:spId,start_date:startDate,end_date:endDate,'start_time (local)':startTime,'end_time (local)':endTime,shift_slots:''};
-      scRows.push(row);
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">CREATE</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${id}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${spId}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${endDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent-text);font-weight:600">${endTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td>`;
-      tbody.appendChild(tr);
-    });
+    const numDays=g.days||1;
+    const baseDate=g.startDate||todayStr;
+    for(let day=0;day<numDays;day++){
+      const sd=new Date(baseDate+'T00:00:00Z');
+      sd.setUTCDate(sd.getUTCDate()+day);
+      const startDate=sd.toISOString().slice(0,10);
+      const ed=new Date(startDate+'T00:00:00Z');
+      if(endSec<=startSec) ed.setUTCDate(ed.getUTCDate()+1);
+      const endDate=ed.toISOString().slice(0,10);
+      ids.forEach(id=>{
+        const row={shift_id:'',adjustment_type:'CREATE',employee_id:id,starting_point_id:spId,start_date:startDate,end_date:endDate,'start_time (local)':startTime,'end_time (local)':endTime,shift_slots:''};
+        scRows.push(row);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">CREATE</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${id}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${spId}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${endDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent-text);font-weight:600">${endTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td>`;
+        tbody.appendChild(tr);
+      });
+    }
   });
   if(!scRows.length){errEl.textContent='مفيش بيانات كافية — تأكد إن كل group فيه SP وIDs';errEl.style.display='block';return;}
   document.getElementById('sc-count').textContent=scRows.length+' شيفت';
