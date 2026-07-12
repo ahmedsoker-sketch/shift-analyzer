@@ -136,9 +136,9 @@ tbody tr:hover{background:var(--bg)}
 </head>
 <body>
 <div class="topbar">
-  <div class="logo"><div class="logo-dot"></div>Shift Gap Analyzer</div>
+  <div class="logo"><div class="logo-dot"></div>Shift Analyzer</div>
   <div style="display:flex;gap:4px">
-    <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Gap Analyzer</button>
+    <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Bulk Extensions</button>
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
   </div>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
@@ -1119,7 +1119,7 @@ function renderScGroups(){
               <div id="sc-dd-items-${i}"></div>
             </div>
           </div>
-          <input type="text" placeholder="أو ID يدوياً" value="${g.spId}" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-top:4px" oninput="scGroups[${i}].spId=this.value;document.getElementById('sc-tr-lbl-${i}').textContent=this.value||'اختار نقطة...'">
+          <input type="text" placeholder="أو SP ID يدوياً" value="${g.spId}" style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:12px;outline:none;margin-top:4px" oninput="scGroups[${i}].spId=this.value;document.getElementById('sc-tr-lbl-${i}').textContent=this.value||'اختار نقطة...'">
         </div>
         <div>
           <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Start Time</label>
