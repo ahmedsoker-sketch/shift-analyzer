@@ -1305,7 +1305,10 @@ function generateShifts(){
       if(endSec<=startSec) ed.setUTCDate(ed.getUTCDate()+1);
       const endDate=ed.toISOString().slice(0,10);
       ids.forEach(id=>{
-        const row={shift_id:'',adjustment_type:'CREATE',employee_id:id,starting_point_id:spId,start_date:startDate,end_date:endDate,'start_time (local)':startTime,'end_time (local)':endTime,shift_slots:''};
+        // system rejects 00:00 as end_time — use 23:59 on same day instead
+        let exportEndTime=endTime, exportEndDate=endDate;
+        if(endTime==='00:00'){exportEndTime='23:59';exportEndDate=startDate;}
+        const row={shift_id:'',adjustment_type:'CREATE',employee_id:id,starting_point_id:spId,start_date:startDate,end_date:exportEndDate,'start_time (local)':startTime,'end_time (local)':exportEndTime,shift_slots:''};
         scRows.push(row);
         const tr=document.createElement('tr');
         tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">CREATE</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${id}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${spId}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${endDate}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)">${startTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border);color:var(--accent-text);font-weight:600">${endTime}</td><td style="padding:9px 10px;border-bottom:1px solid var(--border)"></td>`;
@@ -1337,11 +1340,7 @@ let scRows=[];
 function exportCreator(){
   if(!scRows.length)return;
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
-  const timeCols=new Set(['start_time (local)','end_time (local)']);
-  const data=[hdrs,...scRows.map(r=>hdrs.map(h=>{
-    const v=r[h]??'';
-    return timeCols.has(h)&&v?'="'+String(v)+'"':v;
-  }))];
+  const data=[hdrs,...scRows.map(r=>hdrs.map(h=>r[h]??''))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_create_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
@@ -1700,11 +1699,7 @@ function exportFiltered(){
 function exportRequests(){
   if(!reqOutputRows.length)return;
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
-  const timeCols=new Set(['start_time (local)','end_time (local)']);
-  const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>{
-    const v=r[h]??'';
-    return timeCols.has(h)&&v?'="'+String(v)+'"':v;
-  }))];
+  const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>r[h]??''))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='extend_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
