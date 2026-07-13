@@ -1337,7 +1337,11 @@ let scRows=[];
 function exportCreator(){
   if(!scRows.length)return;
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
-  const data=[hdrs,...scRows.map(r=>hdrs.map(h=>r[h]??''))];
+  const timeCols=new Set(['start_time (local)','end_time (local)']);
+  const data=[hdrs,...scRows.map(r=>hdrs.map(h=>{
+    const v=r[h]??'';
+    return timeCols.has(h)&&v?'="'+String(v)+'"':v;
+  }))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_create_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
@@ -1696,7 +1700,11 @@ function exportFiltered(){
 function exportRequests(){
   if(!reqOutputRows.length)return;
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
-  const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>r[h]??''))];
+  const timeCols=new Set(['start_time (local)','end_time (local)']);
+  const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>{
+    const v=r[h]??'';
+    return timeCols.has(h)&&v?'="'+String(v)+'"':v;
+  }))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='extend_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
