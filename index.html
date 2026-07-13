@@ -1601,6 +1601,15 @@ function runExtendRequests(){
       d.setUTCDate(d.getUTCDate()+1);
       newEndDate=d.toISOString().slice(0,10);
     }
+    // لو الوقت الجديد مش أكبر من نهاية الشيفت الحالية → تجاهل
+    const shiftEndSec=shift.endT??0;
+    const shiftEndNorm=shiftEndSec<shift.startT?shiftEndSec+86400:shiftEndSec;
+    const newEndNorm=newEndSec<shift.startT?newEndSec+86400:newEndSec;
+    if(newEndNorm<=shiftEndNorm){
+      skipped++;
+      skippedRows.push({riderId,timeRaw,reason:'الوقت أقل من أو يساوي نهاية الشيفت الحالية ('+shift.endTStr+')'});
+      continue;
+    }
     const outRow={shift_id:shift.shiftId,adjustment_type:'UPDATE',employee_id:riderId,
       starting_point_id:shift.spId||shift.spName,start_date:shift.startDate,end_date:newEndDate,
       'start_time (local)':shift.startTStr,'end_time (local)':newEndTime,shift_slots:''};
