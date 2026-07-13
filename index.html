@@ -311,7 +311,7 @@ tbody tr:hover{background:var(--bg)}
     <div class="section-label">Extend Requests — تزويد بناءً على ريكويستات</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
       <div>
-        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:6px">📋 ملف الشيفتات (نفس ملف Bulk Extensions)</label>
+        <label style="font-size:12px;color:var(--text-secondary);font-weight:500;display:block;margin-bottom:6px">📋 ملف الشيفتات (نفس ملف Gap Analyzer)</label>
         <div class="drop-zone" id="dz-req-shifts" onclick="document.getElementById('fi-req-shifts').click()" style="padding:1rem;font-size:13px">
           <span id="dz-req-shifts-icon" class="drop-icon" style="font-size:20px;margin-bottom:4px">📂</span>
           اسحب ملف الشيفتات هنا
@@ -853,7 +853,9 @@ function runAnalysis(){
     if(!riderMap[name])riderMap[name]={empId,total:0,shifts:[]};
     // only add to total if SP is selected (already filtered above)
     riderMap[name].total+=(dur||0);
-    riderMap[name].shifts.push({shiftId,dur:dur||0,startT,endT,startDate,endDate,spName,spId});
+    // لو spId فاضي استخدم الـ map عشان نجيب الرقم من الاسم
+    const resolvedSpId = spId || (window._spNameToId && window._spNameToId[spName]) || spName;
+    riderMap[name].shifts.push({shiftId,dur:dur||0,startT,endT,startDate,endDate,spName,spId:resolvedSpId});
     riderMap[name].empId=empId; // keep updating in case first row had empty id
   });
 
@@ -1557,13 +1559,8 @@ function runExtendRequests(){
 
   // detect requests file columns — E=col4(0-indexed), F=col5
   // use header row to find or fallback to index 4,5
-  const reqHeaders=reqRequestRows[0].map(h=>String(h||''));
-  let timeCol=-1, idCol=5;
-  const riderIdx=reqHeaders.findIndex(h=>/rider.?id|employee.?id/i.test(h));
-  if(riderIdx>=0) idCol=riderIdx;
-  // detect time column — دور على عمود فيه "وقت" أو "time"
-  timeCol=reqHeaders.findIndex(h=>/وقت|time/i.test(String(h)) && !/حالة|status/i.test(String(h)));
-  if(timeCol<0) timeCol=4;
+  // أعمدة ثابتة: E=4 وقت، F=5 ID، H=7 حالة الطلب
+  const timeCol=4, idCol=5;
 
   // حالة الطلب دايما في العمود H (index 7)
   const statusCol=7;
@@ -1605,14 +1602,14 @@ function runExtendRequests(){
       newEndDate=d.toISOString().slice(0,10);
     }
     const outRow={shift_id:shift.shiftId,adjustment_type:'UPDATE',employee_id:riderId,
-      starting_point_id:shift.spId,start_date:shift.startDate,end_date:newEndDate,
+      starting_point_id:shift.spId||shift.spName,start_date:shift.startDate,end_date:newEndDate,
       'start_time (local)':shift.startTStr,'end_time (local)':newEndTime,shift_slots:''};
     reqOutputRows.push(outRow);
     const tr=document.createElement('tr');
     tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.shiftId}</td>
       <td style="padding:9px 10px;border-bottom:1px solid var(--border)">UPDATE</td>
       <td style="padding:9px 10px;border-bottom:1px solid var(--border);font-weight:500">${riderId}</td>
-      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.spId}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.spId||shift.spName}</td>
       <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.startDate}</td>
       <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${newEndDate}</td>
       <td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.startTStr}</td>
