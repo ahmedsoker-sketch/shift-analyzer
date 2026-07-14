@@ -129,7 +129,27 @@ tbody tr:hover{background:var(--bg)}
 .hnew{color:var(--accent-text);font-weight:600}
 .empty-r td{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:13px}
 
-  /* Progress steps */
+/* Session Report Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface);z-index:1}
+.modal-title{font-size:16px;font-weight:700}
+.modal-close{background:none;border:none;font-size:18px;color:var(--text-muted);cursor:pointer;padding:4px}
+.modal-close:hover{color:var(--text-primary)}
+.modal-body{padding:1.25rem 1.5rem}
+.rpt-section{margin-bottom:1.5rem}
+.rpt-section-title{font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.rpt-stat-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.rpt-stat-row:last-child{border-bottom:none}
+.rpt-stat-key{color:var(--text-secondary);flex:1}
+.rpt-stat-val{font-weight:600;color:var(--text-primary);text-align:left;direction:ltr}
+.rpt-sp-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:var(--radius);margin-bottom:4px;background:var(--bg);font-size:13px}
+.rpt-sp-name{flex:1;font-weight:500}
+.rpt-sp-hours{color:var(--accent-text);font-weight:700;font-size:13px;direction:ltr}
+.rpt-empty{text-align:center;padding:1rem;color:var(--text-muted);font-size:13px}
+.rpt-export-btn{width:100%;padding:9px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text-secondary);font-size:13px;cursor:pointer;margin-top:10px;font-weight:500}
+.rpt-export-btn:hover{border-color:var(--accent);color:var(--accent-text)}
+
   .steps{display:flex;align-items:center;gap:0;margin-bottom:1.5rem;padding:1rem 1.25rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow-x:auto}
   .step{display:flex;align-items:center;gap:8px;flex-shrink:0}
   .step-circle{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:all .3s;border:2px solid var(--border-strong);color:var(--text-muted);background:var(--bg)}
@@ -150,6 +170,7 @@ tbody tr:hover{background:var(--bg)}
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
     <button class="theme-btn" id="nav-requests" onclick="showSection('requests')">📬 Extend Requests</button>
   </div>
+  <button class="theme-btn" id="report-btn" onclick="showSessionReport()" style="position:relative">📊 Session Report <span id="report-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;line-height:16px;text-align:center">0</span></button>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
 </div>
 <div class="main">
@@ -401,6 +422,19 @@ tbody tr:hover{background:var(--bg)}
   </div>
 </div>
 
+<!-- Session Report Modal -->
+<div id="session-report-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSessionReport()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📊 Session Report</div>
+      <button class="modal-close" onclick="closeSessionReport()">✕</button>
+    </div>
+    <div class="modal-body" id="session-report-body">
+      <!-- filled dynamically -->
+    </div>
+  </div>
+</div>
+
 </div><!-- end main -->
 
 <script>
@@ -413,8 +447,14 @@ function toggleTheme(){
   document.querySelector('.theme-btn').textContent=dark?'☀ Light':'🌙 Dark';
 }
 function switchTab(t){
-  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',['a','u'][i]===t));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+t));
+  const sec=document.getElementById('results-sec');
+  if(!sec)return;
+  sec.querySelectorAll('.tabs .tab').forEach(b=>b.classList.remove('active'));
+  sec.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  const targetBtn=sec.querySelector('.tabs .tab[onclick*="\''+t+'\'"]');
+  if(targetBtn) targetBtn.classList.add('active');
+  const targetPanel=sec.querySelector('#tab-'+t);
+  if(targetPanel) targetPanel.classList.add('active');
 }
 function showErr(m){const e=document.getElementById('err');e.textContent=m;e.style.display=m?'block':'none'}
 
@@ -1108,6 +1148,7 @@ function runAnalysis(){
   }
 
   document.getElementById('results-sec').style.display='block';
+  sessionLog.analysisRuns++;
 }
 
 // ── Save/Load Groups ──
@@ -1153,6 +1194,7 @@ function toggleAllRows(){
 }
 function exportUpload(){
   updateSteps(4);
+  sessionLog.bulkExports++; _bumpBadge();
   const checks=document.querySelectorAll('.row-check');
   const selected=uploads.filter((_,i)=>checks[i]?.checked);
   if(!selected.length){alert('اختار صفوف الأول!');return;}
@@ -1317,6 +1359,7 @@ function generateShifts(){
     }
   });
   if(!scRows.length){errEl.textContent='مفيش بيانات كافية — تأكد إن كل group فيه SP وIDs';errEl.style.display='block';return;}
+  sessionLog.creatorRuns++;
   document.getElementById('sc-count').textContent=scRows.length+' شيفت';
   // build breakdown per SP
   const breakdown={};
@@ -1339,6 +1382,7 @@ function generateShifts(){
 let scRows=[];
 function exportCreator(){
   if(!scRows.length)return;
+  sessionLog.creatorExports++; _bumpBadge();
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
   const data=[hdrs,...scRows.map(r=>hdrs.map(h=>r[h]??''))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
@@ -1615,7 +1659,8 @@ function runExtendRequests(){
     }
     const outRow={shift_id:shift.shiftId,adjustment_type:'UPDATE',employee_id:riderId,
       starting_point_id:shift.spId||shift.spName,start_date:shift.startDate,end_date:newEndDate,
-      'start_time (local)':shift.startTStr,'end_time (local)':newEndTime,shift_slots:''};
+      'start_time (local)':shift.startTStr,'end_time (local)':newEndTime,shift_slots:'',
+      _addedSec: Math.max(0, newEndNorm - shiftEndNorm)};
     reqOutputRows.push(outRow);
     const tr=document.createElement('tr');
     tr.innerHTML=`<td style="padding:9px 10px;border-bottom:1px solid var(--border)">${shift.shiftId}</td>
@@ -1667,6 +1712,7 @@ function runExtendRequests(){
   }
 
   document.getElementById('req-results').style.display='block';
+  sessionLog.reqRuns++; _bumpBadge();
 }
 
 function switchReqTab(t,btn){
@@ -1687,6 +1733,244 @@ function exportSkipped(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skipped_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 
+// ── Session Report ──
+const sessionLog = {
+  bulkExports: 0,
+  creatorExports: 0,
+  reqExports: 0,
+  analysisRuns: 0,
+  creatorRuns: 0,
+  reqRuns: 0,
+};
+
+function _bumpBadge(){
+  const total = sessionLog.bulkExports + sessionLog.creatorExports + sessionLog.reqExports;
+  const b = document.getElementById('report-badge');
+  if(!b) return;
+  b.textContent = total;
+  b.style.display = total > 0 ? 'block' : 'none';
+}
+
+function showSessionReport(){
+  const body = document.getElementById('session-report-body');
+
+  // ── 1. Summary counts ──
+  let html = '<div class="rpt-section">';
+  html += '<div class="rpt-section-title">ملخص الـ Session</div>';
+
+  const rows = [
+    ['Bulk Extensions — تشغيل التحليل', sessionLog.analysisRuns + ' مرة'],
+    ['Bulk Extensions — CSV اتسحب', sessionLog.bulkExports + ' مرة'],
+    ['Shift Creator — توليد شيفتات', sessionLog.creatorRuns + ' مرة'],
+    ['Shift Creator — CSV اتسحب', sessionLog.creatorExports + ' مرة'],
+    ['Extend Requests — توليد', sessionLog.reqRuns + ' مرة'],
+    ['Extend Requests — CSV اتسحب', sessionLog.reqExports + ' مرة'],
+  ];
+  rows.forEach(([k,v])=>{
+    html += `<div class="rpt-stat-row"><span class="rpt-stat-key">${k}</span><span class="rpt-stat-val">${v}</span></div>`;
+  });
+  html += '</div>';
+
+  // ── 2. Bulk Extensions — before/after avg per SP ──
+  html += '<div class="rpt-section">';
+  html += '<div class="rpt-section-title">⏩ Bulk Extensions — متوسط الساعات قبل وبعد per SP</div>';
+  if(results && results.length){
+    // group by spName
+    const spData = {};
+    results.forEach(r => {
+      const key = r.spName || r.spId || 'غير محدد';
+      if(!spData[key]) spData[key] = {beforeSecs:[], afterSecs:[], addedTotal:0, riders:0};
+      spData[key].beforeSecs.push(r.total);
+      spData[key].afterSecs.push(r.total + (r.addSec||0));
+      spData[key].addedTotal += (r.addSec||0);
+      spData[key].riders++;
+    });
+    const entries = Object.entries(spData).sort((a,b)=>b[1].addedTotal - a[1].addedTotal);
+    if(entries.length){
+      html += `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;margin-bottom:6px">
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700">النقطة</div>
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">قبل</div>
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">بعد</div>
+        <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">زيادة</div>
+      </div>`;
+      entries.forEach(([sp, d])=>{
+        const avgBefore = d.beforeSecs.reduce((a,b)=>a+b,0)/d.beforeSecs.length;
+        const avgAfter  = d.afterSecs.reduce((a,b)=>a+b,0)/d.afterSecs.length;
+        const diff = avgAfter - avgBefore;
+        html += `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;background:var(--bg);border-radius:var(--radius);margin-bottom:4px;align-items:center">
+          <div style="padding:8px 10px;font-size:13px;font-weight:500">${sp}<span style="font-size:11px;color:var(--text-muted);margin-right:6px">(${d.riders} مندوب)</span></div>
+          <div style="padding:8px 10px;font-size:13px;color:var(--warn-text);text-align:center;direction:ltr;min-width:72px">${fmtH(avgBefore)}</div>
+          <div style="padding:8px 10px;font-size:13px;color:var(--success-text);text-align:center;direction:ltr;min-width:72px">${fmtH(avgAfter)}</div>
+          <div style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;direction:ltr;min-width:72px">+${fmtH(diff)}</div>
+        </div>`;
+      });
+      // totals row
+      const allBefore = Object.values(spData).flatMap(d=>d.beforeSecs);
+      const allAfter  = Object.values(spData).flatMap(d=>d.afterSecs);
+      const grandAvgB = allBefore.reduce((a,b)=>a+b,0)/allBefore.length;
+      const grandAvgA = allAfter.reduce((a,b)=>a+b,0)/allAfter.length;
+      html += `<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:0;border-top:2px solid var(--border);margin-top:6px;padding-top:6px">
+        <div style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--text-secondary)">المتوسط الكلي</div>
+        <div style="padding:6px 10px;font-size:13px;font-weight:700;color:var(--warn-text);text-align:center;direction:ltr;min-width:72px">${fmtH(grandAvgB)}</div>
+        <div style="padding:6px 10px;font-size:13px;font-weight:700;color:var(--success-text);text-align:center;direction:ltr;min-width:72px">${fmtH(grandAvgA)}</div>
+        <div style="padding:6px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;direction:ltr;min-width:72px">+${fmtH(grandAvgA-grandAvgB)}</div>
+      </div>`;
+    } else {
+      html += '<div class="rpt-empty">مفيش زيادات — كل المناديب وصلوا الـ target</div>';
+    }
+  } else {
+    html += '<div class="rpt-empty">لسه ما اتشغلش Bulk Extensions في الـ session دي</div>';
+  }
+  html += '</div>';
+
+  // ── 3. Bulk Extensions — needed hours per SP (riders still below target) ──
+  html += '<div class="rpt-section">';
+  html += '<div class="rpt-section-title">⏩ Bulk Extensions — لسه ناقصين per SP</div>';
+  if(results && results.length){
+    const spNeeded = {};
+    results.forEach(r => {
+      const remaining = r.stillShort ? r.remainingShort : 0;
+      if(remaining > 0){
+        const key = r.spName || r.spId || 'غير محدد';
+        if(!spNeeded[key]) spNeeded[key]={sec:0,riders:0};
+        spNeeded[key].sec += remaining;
+        spNeeded[key].riders++;
+      }
+    });
+    const entries = Object.entries(spNeeded).sort((a,b)=>b[1].sec-a[1].sec);
+    if(entries.length){
+      entries.forEach(([sp,d])=>{
+        html += `<div class="rpt-sp-row"><span class="rpt-sp-name">${sp} <span style="font-size:11px;color:var(--text-muted)">(${d.riders} مندوب)</span></span><span class="rpt-sp-hours" style="color:var(--warn-text)">${fmtH(d.sec)} ناقص</span></div>`;
+      });
+    } else {
+      html += '<div class="rpt-empty">مفيش ناقصين بعد الزيادة 🎉</div>';
+    }
+  } else {
+    html += '<div class="rpt-empty">لسه ما اتشغلش Bulk Extensions</div>';
+  }
+  html += '</div>';
+
+  // ── 4. Shift Creator breakdown ──
+  html += '<div class="rpt-section">';
+  html += '<div class="rpt-section-title">➕ Shift Creator — شيفتات اتولدت per SP</div>';
+  if(scRows && scRows.length){
+    const spCreate = {};
+    scRows.forEach(r=>{
+      const key = r.starting_point_id || 'غير محدد';
+      spCreate[key] = (spCreate[key]||0) + 1;
+    });
+    Object.entries(spCreate).sort((a,b)=>b[1]-a[1]).forEach(([spId, cnt])=>{
+      // try to resolve name
+      const spName = window._spNameToId ? (Object.entries(window._spNameToId).find(([n,id])=>id===spId)?.[0]||spId) : spId;
+      html += `<div class="rpt-sp-row"><span class="rpt-sp-name">${spName !== spId ? spName+' ('+spId+')' : spId}</span><span class="rpt-sp-hours" style="color:var(--success-text)">${cnt} شيفت</span></div>`;
+    });
+    html += `<div class="rpt-stat-row" style="margin-top:8px"><span class="rpt-stat-key" style="font-weight:600">إجمالي</span><span class="rpt-stat-val" style="color:var(--success-text)">${scRows.length} شيفت</span></div>`;
+  } else {
+    html += '<div class="rpt-empty">لسه ما اتولدش شيفتات</div>';
+  }
+  html += '</div>';
+
+  // ── 5. Extend Requests — hours added per SP ──
+  html += '<div class="rpt-section">';
+  html += '<div class="rpt-section-title">📬 Extend Requests — ساعات زيادة per SP</div>';
+  if(reqOutputRows && reqOutputRows.length){
+    const spReq = {};
+    reqOutputRows.forEach(r=>{
+      const key = r.starting_point_id || 'غير محدد';
+      if(!spReq[key]) spReq[key]={count:0, addedSec:0};
+      spReq[key].count++;
+      spReq[key].addedSec += (r._addedSec||0);
+    });
+    const entries = Object.entries(spReq).sort((a,b)=>b[1].addedSec - a[1].addedSec);
+    html += `<div style="display:grid;grid-template-columns:1fr auto auto;gap:0;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700">النقطة</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">عدد الطلبات</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">ساعات زادت</div>
+    </div>`;
+    entries.forEach(([spId, d])=>{
+      const spName = window._spNameToId ? (Object.entries(window._spNameToId).find(([n,id])=>id===spId)?.[0]||spId) : spId;
+      const label = spName !== spId ? spName+' ('+spId+')' : spId;
+      html += `<div style="display:grid;grid-template-columns:1fr auto auto;gap:0;background:var(--bg);border-radius:var(--radius);margin-bottom:4px;align-items:center">
+        <div style="padding:8px 10px;font-size:13px;font-weight:500">${label}</div>
+        <div style="padding:8px 10px;font-size:13px;color:var(--text-secondary);text-align:center;min-width:80px">${d.count} طلب</div>
+        <div style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;direction:ltr;min-width:80px">${d.addedSec > 0 ? '+'+fmtH(d.addedSec) : '—'}</div>
+      </div>`;
+    });
+    const totalAdded = entries.reduce((a,[,d])=>a+d.addedSec,0);
+    const totalReqs  = entries.reduce((a,[,d])=>a+d.count,0);
+    html += `<div style="display:grid;grid-template-columns:1fr auto auto;gap:0;border-top:2px solid var(--border);margin-top:6px;padding-top:6px">
+      <div style="padding:6px 10px;font-size:12px;font-weight:700;color:var(--text-secondary)">الإجمالي</div>
+      <div style="padding:6px 10px;font-size:13px;font-weight:700;color:var(--text-secondary);text-align:center;min-width:80px">${totalReqs} طلب</div>
+      <div style="padding:6px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;direction:ltr;min-width:80px">${totalAdded > 0 ? '+'+fmtH(totalAdded) : '—'}</div>
+    </div>`;
+  } else {
+    html += '<div class="rpt-empty">لسه ما اتولدش Extend Requests</div>';
+  }
+  html += '</div>';
+
+  // export button
+  html += '<button class="rpt-export-btn" onclick="exportSessionReport()">⬇ تصدير الـ Report كـ CSV</button>';
+
+  body.innerHTML = html;
+  document.getElementById('session-report-modal').style.display = 'flex';
+}
+
+function closeSessionReport(){
+  document.getElementById('session-report-modal').style.display = 'none';
+}
+
+function exportSessionReport(){
+  const lines = ['"قسم","تفصيلة","قيمة"'];
+  // Summary
+  [
+    ['ملخص','Bulk Extensions — تشغيل',sessionLog.analysisRuns],
+    ['ملخص','Bulk Extensions — CSV اتسحب',sessionLog.bulkExports],
+    ['ملخص','Shift Creator — توليد',sessionLog.creatorRuns],
+    ['ملخص','Shift Creator — CSV اتسحب',sessionLog.creatorExports],
+    ['ملخص','Extend Requests — توليد',sessionLog.reqRuns],
+    ['ملخص','Extend Requests — CSV اتسحب',sessionLog.reqExports],
+  ].forEach(r=>lines.push(r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')));
+
+  if(results && results.length){
+    const spData={};
+    results.forEach(r=>{
+      const k=r.spName||r.spId||'غير محدد';
+      if(!spData[k]) spData[k]={beforeSecs:[],afterSecs:[],riders:0};
+      spData[k].beforeSecs.push(r.total);
+      spData[k].afterSecs.push(r.total+(r.addSec||0));
+      spData[k].riders++;
+    });
+    Object.entries(spData).forEach(([sp,d])=>{
+      const avgB=d.beforeSecs.reduce((a,b)=>a+b,0)/d.beforeSecs.length;
+      const avgA=d.afterSecs.reduce((a,b)=>a+b,0)/d.afterSecs.length;
+      lines.push(['"Bulk — متوسط قبل"','"'+sp+'"','"'+fmtH(avgB)+'"'].join(','));
+      lines.push(['"Bulk — متوسط بعد"','"'+sp+'"','"'+fmtH(avgA)+'"'].join(','));
+      lines.push(['"Bulk — زيادة avg"','"'+sp+'"','"+'+(fmtH(avgA-avgB))+'"'].join(','));
+    });
+    const spNeeded={};
+    results.forEach(r=>{ if(r.stillShort&&r.remainingShort>0){ const k=r.spName||r.spId||'غير محدد'; spNeeded[k]=(spNeeded[k]||0)+r.remainingShort; }});
+    Object.entries(spNeeded).forEach(([sp,sec])=>lines.push(['"Bulk — لسه ناقص"','"'+sp+'"','"'+fmtH(sec)+'"'].join(',')));
+  }
+
+  if(scRows && scRows.length){
+    const spCreate={};
+    scRows.forEach(r=>{ const k=r.starting_point_id||'غير محدد'; spCreate[k]=(spCreate[k]||0)+1; });
+    Object.entries(spCreate).forEach(([spId,cnt])=>lines.push(['"Shift Creator"','"'+spId+'"','"'+cnt+' شيفت"'].join(',')));
+  }
+
+  if(reqOutputRows && reqOutputRows.length){
+    const spReq={};
+    reqOutputRows.forEach(r=>{ const k=r.starting_point_id||'غير محدد'; if(!spReq[k]) spReq[k]={count:0,addedSec:0}; spReq[k].count++; spReq[k].addedSec+=(r._addedSec||0); });
+    Object.entries(spReq).forEach(([spId,d])=>lines.push(['"Extend Requests"','"'+spId+'"','"'+d.count+' طلب / +'+fmtH(d.addedSec)+'"'].join(',')));
+  }
+
+  const csv=lines.join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='session_report_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+}
+
+
 function exportFiltered(){
   if(!_filteredRows.length)return;
   const hdrs=['rider_id','الوقت المطلوب','الحالة'];
@@ -1698,6 +1982,7 @@ function exportFiltered(){
 
 function exportRequests(){
   if(!reqOutputRows.length)return;
+  sessionLog.reqExports++; _bumpBadge();
   const hdrs=['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
   const data=[hdrs,...reqOutputRows.map(r=>hdrs.map(h=>r[h]??''))];
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
