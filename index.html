@@ -2235,27 +2235,36 @@ function loadReport() {
   empty.style.display = error.style.display = content.style.display = 'none';
   status.textContent = '';
 
-  fetch(REPORT_ENDPOINT, {redirect: 'follow'})
-    .then(res => {
-      loading.style.display = 'none';
-      if (res.status !== 'ok') throw new Error(res.message);
-      _rptAllRows = res.rows || [];
-      if (!_rptAllRows.length) { empty.style.display = 'block'; return; }
-
-      // populate user filter
-      const userSel = document.getElementById('rpt-user-filter');
-      const curUser = userSel.value;
-      const users   = [...new Set(_rptAllRows.map(r => r.user))].sort();
-      userSel.innerHTML = '<option value="">كل المستخدمين</option>' +
-        users.map(u => `<option value="${u}" ${u===curUser?'selected':''}>${u}</option>`).join('');
-
-      _renderReport();
-    })
-    .catch(err => {
-      loading.style.display = 'none';
+  // JSONP to bypass CORS
+  const cbName = 'rpt_cb_' + Date.now();
+  const script = document.createElement('script');
+  script.src = REPORT_ENDPOINT + '?callback=' + cbName;
+  script.onerror = () => {
+    loading.style.display = 'none';
+    error.style.display = 'block';
+    error.textContent = 'فشل تحميل البيانات — تأكد من الـ Apps Script deployment';
+    delete window[cbName];
+    if (script.parentNode) document.body.removeChild(script);
+  };
+  window[cbName] = (res) => {
+    delete window[cbName];
+    if (script.parentNode) document.body.removeChild(script);
+    loading.style.display = 'none';
+    if (res.status !== 'ok') {
       error.style.display = 'block';
-      error.textContent = 'فشل تحميل البيانات: ' + err.message;
-    });
+      error.textContent = 'خطأ: ' + res.message;
+      return;
+    }
+    _rptAllRows = res.rows || [];
+    if (!_rptAllRows.length) { empty.style.display = 'block'; return; }
+    const userSel = document.getElementById('rpt-user-filter');
+    const curUser = userSel.value;
+    const users   = [...new Set(_rptAllRows.map(r => r.user))].sort();
+    userSel.innerHTML = '<option value="">كل المستخدمين</option>' +
+      users.map(u => `<option value="${u}" ${u===curUser?'selected':''}>${u}</option>`).join('');
+    _renderReport();
+  };
+  document.body.appendChild(script);
 }
 
 function _renderReport() {
