@@ -169,8 +169,8 @@ tbody tr:hover{background:var(--bg)}
     <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Bulk Extensions</button>
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
     <button class="theme-btn" id="nav-requests" onclick="showSection('requests')">📬 Extend Requests</button>
+    <button class="theme-btn" id="nav-report" onclick="showSection('report')">📋 Report</button>
   </div>
-  <button class="theme-btn" id="report-btn" onclick="showSessionReport()" style="position:relative">📊 Session Report <span id="report-badge" style="display:none;position:absolute;top:-5px;right:-5px;background:var(--accent);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;line-height:16px;text-align:center">0</span></button>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
 </div>
 <div class="main">
@@ -422,6 +422,22 @@ tbody tr:hover{background:var(--bg)}
   </div>
 </div>
 
+<!-- User Name Modal -->
+<div id="username-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUsernameModal()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title">👤 اسمك إيه؟</div>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-secondary);margin-bottom:1rem">هيتحفظ تلقائي ومش هيطلبه منك تاني.</p>
+      <input type="text" id="username-input" placeholder="مثال: Ahmed Soker"
+        style="width:100%;padding:10px 14px;border:1px solid var(--border-strong);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;margin-bottom:1rem"
+        onkeydown="if(event.key==='Enter')saveUsername()">
+      <button class="run-btn" onclick="saveUsername()">حفظ ومتابعة</button>
+    </div>
+  </div>
+</div>
+
 <!-- Session Report Modal -->
 <div id="session-report-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeSessionReport()">
   <div class="modal-box">
@@ -434,6 +450,87 @@ tbody tr:hover{background:var(--bg)}
     </div>
   </div>
 </div>
+
+<!-- REPORT SECTION -->
+<div id="section-report" style="display:none">
+
+  <!-- filter bar -->
+  <div class="card" style="padding:1rem 1.25rem">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap">من</label>
+        <input type="date" id="rpt-from" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:13px;outline:none">
+        <label style="font-size:12px;color:var(--text-secondary);white-space:nowrap">لـ</label>
+        <input type="date" id="rpt-to" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:13px;outline:none">
+      </div>
+      <select id="rpt-user-filter" style="padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:13px;outline:none">
+        <option value="">كل المستخدمين</option>
+      </select>
+      <button class="exp-btn" onclick="loadReport()">🔄 تحديث</button>
+      <span id="rpt-status" style="font-size:12px;color:var(--text-muted)"></span>
+    </div>
+  </div>
+
+  <!-- loading -->
+  <div id="rpt-loading" style="display:none;text-align:center;padding:3rem;color:var(--text-muted);font-size:13px">⏳ جاري التحميل...</div>
+  <div id="rpt-empty"   style="display:none;text-align:center;padding:3rem;color:var(--text-muted);font-size:13px">مفيش بيانات لحد دلوقتي</div>
+  <div id="rpt-error"   style="display:none;text-align:center;padding:3rem;color:var(--danger-text);font-size:13px"></div>
+
+  <!-- content -->
+  <div id="rpt-content" style="display:none">
+
+    <!-- summary stats -->
+    <div class="summary-grid" id="rpt-summary"></div>
+
+    <!-- tabs -->
+    <div class="card">
+      <div class="tabs" id="rpt-tabs">
+        <button class="tab active" onclick="switchRptTab('bulk',this)">⏩ Bulk Extensions</button>
+        <button class="tab" onclick="switchRptTab('extend',this)">📬 Extend Requests</button>
+        <button class="tab" onclick="switchRptTab('creator',this)">➕ Shift Creator</button>
+      </div>
+
+      <!-- Bulk tab -->
+      <div id="rpt-panel-bulk" class="tab-panel active">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">متوسط ساعات المناديب قبل وبعد الزيادة لكل نقطة</div>
+        <div id="rpt-bulk-content"></div>
+      </div>
+
+      <!-- Extend tab -->
+      <div id="rpt-panel-extend" class="tab-panel">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">ساعات الزيادة من Extend Requests لكل نقطة</div>
+        <div id="rpt-extend-content"></div>
+      </div>
+
+      <!-- Creator tab -->
+      <div id="rpt-panel-creator" class="tab-panel">
+        <div style="font-size:12px;color:var(--text-secondary);margin-bottom:12px">الشيفتات الجديدة اللي اتولدت لكل نقطة</div>
+        <div id="rpt-creator-content"></div>
+      </div>
+    </div>
+
+    <!-- raw log -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span style="font-size:13px;font-weight:600">سجل كل العمليات</span>
+        <span class="badge badge-a" id="rpt-log-count"></span>
+      </div>
+      <div style="overflow-x:auto">
+        <table dir="ltr" style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr id="rpt-log-head" style="background:var(--bg)">
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">Timestamp</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">User</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">Tab</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">SP</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">Details</th>
+          </tr></thead>
+          <tbody id="rpt-log-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div><!-- end section-report -->
 
 </div><!-- end main -->
 
@@ -1203,6 +1300,7 @@ function exportUpload(){
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_upload_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  _autoSendReport('bulk');
 }
 function exportAnalysis(){
   if(!results.length)return;
@@ -1294,15 +1392,16 @@ function renderScGroups(){
 }
 
 function showSection(name){
-  ['analyzer','creator','requests'].forEach(s=>{
+  ['analyzer','creator','requests','report'].forEach(s=>{
     const el=document.getElementById('section-'+s);
     if(el) el.style.display=name===s?'block':'none';
   });
-  ['analyzer','creator','requests'].forEach(s=>{
+  ['analyzer','creator','requests','report'].forEach(s=>{
     const btn=document.getElementById('nav-'+s);
     if(btn) btn.style.cssText=name===s?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
   });
   if(name==='creator') initCreator();
+  if(name==='report')  loadReport();
 }
 function refreshCreatorSPs(){
   const spSel=document.getElementById('sc-sp');
@@ -1388,6 +1487,7 @@ function exportCreator(){
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='shift_create_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  _autoSendReport('creator');
 }
 
 // ── SC Dropdown ──
@@ -1733,7 +1833,126 @@ function exportSkipped(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='skipped_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
 }
 
-// ── Session Report ──
+// ── Username ──
+const REPORT_ENDPOINT = 'https://script.google.com/macros/s/AKfycbyk5Tfi24H3s3KcrwbiS-xteXwZ8383usrO0F4UY4lATRJLvIMsPjv15u39D4av8vgq/exec';
+
+function getUsername() {
+  return localStorage.getItem('shiftAnalyzerUser') || '';
+}
+
+function saveUsername() {
+  const val = document.getElementById('username-input').value.trim();
+  if (!val) { alert('اكتب اسمك الأول'); return; }
+  localStorage.setItem('shiftAnalyzerUser', val);
+  closeUsernameModal();
+  // send the pending tab
+  const pending = document._pendingReportTab;
+  if (pending) { delete document._pendingReportTab; _doSendReport(pending); }
+}
+
+function closeUsernameModal() {
+  document.getElementById('username-modal').style.display = 'none';
+}
+
+// called automatically on each CSV export
+function _autoSendReport(tab) {
+  if (!REPORT_ENDPOINT) return;
+  const user = getUsername();
+  if (!user) {
+    // ask for name then send
+    document._pendingReportTab = tab;
+    document.getElementById('username-input').value = '';
+    document.getElementById('username-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('username-input').focus(), 100);
+    return;
+  }
+  _doSendReport(tab);
+}
+
+// manual button - send all available data
+function sendReport() {
+  const hasBulk    = results && results.length > 0;
+  const hasCreator = scRows && scRows.length > 0;
+  const hasExtend  = reqOutputRows && reqOutputRows.length > 0;
+  if (!hasBulk && !hasCreator && !hasExtend) {
+    alert('مفيش بيانات — حمّل CSV الأول.');
+    return;
+  }
+  _autoSendReport('all');
+}
+
+function _doSendReport(tab) {
+  const user = getUsername();
+  const date = new Date().toLocaleDateString('en-CA', {timeZone:'Africa/Cairo'});
+  const btn  = document.getElementById('send-report-btn');
+
+  // ── bulk ──
+  const spData = {};
+  if ((tab === 'bulk' || tab === 'all') && results && results.length) {
+    results.forEach(r => {
+      const key = r.spName || r.spId || 'غير محدد';
+      if (!spData[key]) spData[key] = { spName: key, beforeSecs: [], afterSecs: [] };
+      spData[key].beforeSecs.push(r.total);
+      spData[key].afterSecs.push(r.total + (r.addSec || 0));
+    });
+  }
+  const bulk = Object.values(spData).map(d => {
+    const avgB = d.beforeSecs.reduce((a,b)=>a+b,0) / d.beforeSecs.length;
+    const avgA = d.afterSecs.reduce((a,b)=>a+b,0)  / d.afterSecs.length;
+    return { spName: d.spName, riders: d.beforeSecs.length, avgBefore: fmtH(avgB), avgAfter: fmtH(avgA), avgAdded: '+' + fmtH(avgA - avgB) };
+  });
+
+  // ── extend ──
+  const spReq = {};
+  if ((tab === 'extend' || tab === 'all') && reqOutputRows && reqOutputRows.length) {
+    reqOutputRows.forEach(r => {
+      const k = r.starting_point_id || 'غير محدد';
+      if (!spReq[k]) spReq[k] = { count: 0, addedSec: 0 };
+      spReq[k].count++;
+      spReq[k].addedSec += (r._addedSec || 0);
+    });
+  }
+  const extend = Object.entries(spReq).map(([spId, d]) => {
+    const spName = window._spNameToId ? (Object.entries(window._spNameToId).find(([n,id])=>id===spId)?.[0] || spId) : spId;
+    return { spName: spName !== spId ? spName+'('+spId+')' : spId, count: d.count, hoursAdded: '+'+fmtH(d.addedSec) };
+  });
+
+  // ── creator ──
+  const spCreate = {};
+  if ((tab === 'creator' || tab === 'all') && scRows && scRows.length) {
+    scRows.forEach(r => {
+      const k = r.starting_point_id || 'غير محدد';
+      spCreate[k] = (spCreate[k] || 0) + 1;
+    });
+  }
+  const creator = Object.entries(spCreate).map(([spId, cnt]) => {
+    const spName = window._spNameToId ? (Object.entries(window._spNameToId).find(([n,id])=>id===spId)?.[0] || spId) : spId;
+    return { spName: spName !== spId ? spName+'('+spId+')' : spId, count: cnt };
+  });
+
+  if (!bulk.length && !extend.length && !creator.length) return;
+
+  const payload = { user, date, tab, bulk, extend, creator };
+
+  if (btn) { btn.textContent = '⏳ جاري الإرسال...'; btn.disabled = true; }
+
+  fetch(REPORT_ENDPOINT, { method: 'POST', body: JSON.stringify(payload) })
+    .then(r => r.json())
+    .then(res => {
+      if (res.status === 'ok') {
+        if (btn) {
+          btn.textContent = '✅ اتبعت!';
+          setTimeout(() => { btn.textContent = '📤 إرسال للريبورت'; btn.disabled = false; }, 3000);
+        }
+      } else { throw new Error(res.message); }
+    })
+    .catch(err => {
+      console.error('Report send error:', err);
+      if (btn) { btn.textContent = '📤 إرسال للريبورت'; btn.disabled = false; }
+    });
+}
+
+
 const sessionLog = {
   bulkExports: 0,
   creatorExports: 0,
@@ -1988,7 +2207,170 @@ function exportRequests(){
   const csv=data.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='extend_requests_'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  _autoSendReport('extend');
 }
+
+// ── Report Tab ──
+let _rptAllRows = [];
+
+function switchRptTab(name, btn) {
+  document.querySelectorAll('#rpt-tabs .tab').forEach(b => b.classList.remove('active'));
+  ['bulk','extend','creator'].forEach(p => {
+    const el = document.getElementById('rpt-panel-' + p);
+    if (el) el.classList.remove('active');
+  });
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('rpt-panel-' + name);
+  if (panel) panel.classList.add('active');
+}
+
+function loadReport() {
+  const loading = document.getElementById('rpt-loading');
+  const empty   = document.getElementById('rpt-empty');
+  const error   = document.getElementById('rpt-error');
+  const content = document.getElementById('rpt-content');
+  const status  = document.getElementById('rpt-status');
+
+  loading.style.display = 'block';
+  empty.style.display = error.style.display = content.style.display = 'none';
+  status.textContent = '';
+
+  fetch(REPORT_ENDPOINT, {redirect: 'follow'})
+    .then(res => {
+      loading.style.display = 'none';
+      if (res.status !== 'ok') throw new Error(res.message);
+      _rptAllRows = res.rows || [];
+      if (!_rptAllRows.length) { empty.style.display = 'block'; return; }
+
+      // populate user filter
+      const userSel = document.getElementById('rpt-user-filter');
+      const curUser = userSel.value;
+      const users   = [...new Set(_rptAllRows.map(r => r.user))].sort();
+      userSel.innerHTML = '<option value="">كل المستخدمين</option>' +
+        users.map(u => `<option value="${u}" ${u===curUser?'selected':''}>${u}</option>`).join('');
+
+      _renderReport();
+    })
+    .catch(err => {
+      loading.style.display = 'none';
+      error.style.display = 'block';
+      error.textContent = 'فشل تحميل البيانات: ' + err.message;
+    });
+}
+
+function _renderReport() {
+  const from    = document.getElementById('rpt-from').value;
+  const to      = document.getElementById('rpt-to').value;
+  const userF   = document.getElementById('rpt-user-filter').value;
+  const content = document.getElementById('rpt-content');
+  const empty   = document.getElementById('rpt-empty');
+
+  let rows = _rptAllRows.filter(r => {
+    if (userF && r.user !== userF) return false;
+    if (from  && r.date < from)    return false;
+    if (to    && r.date > to)      return false;
+    return true;
+  });
+
+  if (!rows.length) { empty.style.display='block'; content.style.display='none'; return; }
+  empty.style.display = 'none';
+  content.style.display = 'block';
+
+  const bulkRows    = rows.filter(r => r.tab === 'Bulk Extensions');
+  const extendRows  = rows.filter(r => r.tab === 'Extend Requests');
+  const creatorRows = rows.filter(r => r.tab === 'Shift Creator');
+  const usersCount  = new Set(rows.map(r => r.user)).size;
+
+  // summary
+  document.getElementById('rpt-summary').innerHTML = `
+    <div class="stat-card"><div class="stat-lbl">إجمالي العمليات</div><div class="stat-val">${rows.length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">المستخدمين</div><div class="stat-val">${usersCount}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Bulk Extensions</div><div class="stat-val" style="color:var(--accent-text)">${bulkRows.length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Extend Requests</div><div class="stat-val" style="color:var(--warn-text)">${extendRows.length}</div></div>
+    <div class="stat-card"><div class="stat-lbl">Shift Creator</div><div class="stat-val" style="color:var(--success-text)">${creatorRows.length}</div></div>`;
+
+  // ── Bulk ──
+  const spBulk = {};
+  bulkRows.forEach(r => {
+    const k = r.spName||'غير محدد';
+    if (!spBulk[k]) spBulk[k]={riders:r.ridersCount,avgBefore:r.avgBefore,avgAfter:r.avgAfter,avgAdded:r.avgAdded};
+    spBulk[k].riders=r.ridersCount; spBulk[k].avgBefore=r.avgBefore; spBulk[k].avgAfter=r.avgAfter; spBulk[k].avgAdded=r.avgAdded;
+  });
+  let bHtml = Object.keys(spBulk).length ? `
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;gap:0;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700">النقطة</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">مناديب</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">قبل</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">بعد</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">زيادة</div>
+    </div>` + Object.entries(spBulk).map(([sp,d])=>`
+    <div style="display:grid;grid-template-columns:1fr auto auto auto auto;background:var(--bg);border-radius:var(--radius);margin-bottom:4px;align-items:center">
+      <div style="padding:8px 10px;font-size:13px;font-weight:500">${sp}</div>
+      <div style="padding:8px 10px;font-size:13px;color:var(--text-secondary);text-align:center;min-width:60px">${d.riders||'—'}</div>
+      <div style="padding:8px 10px;font-size:13px;color:var(--warn-text);text-align:center;min-width:72px;direction:ltr">${d.avgBefore||'—'}</div>
+      <div style="padding:8px 10px;font-size:13px;color:var(--success-text);text-align:center;min-width:72px;direction:ltr">${d.avgAfter||'—'}</div>
+      <div style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;min-width:72px;direction:ltr">${d.avgAdded||'—'}</div>
+    </div>`).join('') : '<div class="rpt-empty">مفيش بيانات</div>';
+  document.getElementById('rpt-bulk-content').innerHTML = bHtml;
+
+  // ── Extend ──
+  const spExt = {};
+  extendRows.forEach(r => {
+    const k=r.spName||'غير محدد';
+    if(!spExt[k]) spExt[k]={count:0,hoursAdded:r.hoursAdded};
+    spExt[k].count+=Number(r.totalReqs)||1; spExt[k].hoursAdded=r.hoursAdded;
+  });
+  let eHtml = Object.keys(spExt).length ? `
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:0;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700">النقطة</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">طلبات</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">ساعات زادت</div>
+    </div>` + Object.entries(spExt).map(([sp,d])=>`
+    <div style="display:grid;grid-template-columns:1fr auto auto;background:var(--bg);border-radius:var(--radius);margin-bottom:4px;align-items:center">
+      <div style="padding:8px 10px;font-size:13px;font-weight:500">${sp}</div>
+      <div style="padding:8px 10px;font-size:13px;color:var(--text-secondary);text-align:center;min-width:80px">${d.count} طلب</div>
+      <div style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--accent-text);text-align:center;min-width:90px;direction:ltr">${d.hoursAdded||'—'}</div>
+    </div>`).join('') : '<div class="rpt-empty">مفيش بيانات</div>';
+  document.getElementById('rpt-extend-content').innerHTML = eHtml;
+
+  // ── Creator ──
+  const spCr = {};
+  creatorRows.forEach(r => { const k=r.spName||'غير محدد'; spCr[k]=(spCr[k]||0)+(Number(r.shiftsCreated)||1); });
+  let cHtml = Object.keys(spCr).length ? `
+    <div style="display:grid;grid-template-columns:1fr auto;gap:0;margin-bottom:6px">
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700">النقطة</div>
+      <div style="font-size:11px;color:var(--text-muted);padding:4px 8px;font-weight:700;text-align:center">شيفتات</div>
+    </div>` + Object.entries(spCr).sort((a,b)=>b[1]-a[1]).map(([sp,cnt])=>`
+    <div style="display:grid;grid-template-columns:1fr auto;background:var(--bg);border-radius:var(--radius);margin-bottom:4px;align-items:center">
+      <div style="padding:8px 10px;font-size:13px;font-weight:500">${sp}</div>
+      <div style="padding:8px 10px;font-size:13px;font-weight:700;color:var(--success-text);text-align:center;min-width:100px">${cnt} شيفت</div>
+    </div>`).join('') : '<div class="rpt-empty">مفيش بيانات</div>';
+  document.getElementById('rpt-creator-content').innerHTML = cHtml;
+
+  // ── Log ──
+  document.getElementById('rpt-log-count').textContent = rows.length + ' سجل';
+  const tbody = document.getElementById('rpt-log-tbody');
+  tbody.innerHTML = '';
+  [...rows].reverse().forEach(r => {
+    let details = '';
+    if (r.tab==='Bulk Extensions') details=`قبل: ${r.avgBefore} → بعد: ${r.avgAfter} (${r.avgAdded})`;
+    if (r.tab==='Extend Requests') details=`${r.totalReqs} طلب · ${r.hoursAdded}`;
+    if (r.tab==='Shift Creator')   details=`${r.shiftsCreated} شيفت`;
+    const tc = r.tab==='Bulk Extensions'?'var(--accent-text)':r.tab==='Extend Requests'?'var(--warn-text)':'var(--success-text)';
+    const tr = document.createElement('tr');
+    tr.innerHTML=`
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text-muted);white-space:nowrap">${r.timestamp}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border);font-weight:500">${r.user}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border);color:${tc};white-space:nowrap">${r.tab}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border)">${r.spName}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid var(--border);direction:ltr;text-align:left">${details}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('rpt-status').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('en-GB');
+}
+
+
 
 </script>
 </body>
