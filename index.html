@@ -169,6 +169,7 @@ tbody tr:hover{background:var(--bg)}
     <button class="theme-btn" id="nav-analyzer" onclick="showSection('analyzer')" style="background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)">📊 Bulk Extensions</button>
     <button class="theme-btn" id="nav-creator" onclick="showSection('creator')">➕ Shift Creator</button>
     <button class="theme-btn" id="nav-requests" onclick="showSection('requests')">📬 Extend Requests</button>
+    <button class="theme-btn" id="nav-ending" onclick="showSection('ending')">⏹ Ending Extension</button>
     <button class="theme-btn" id="nav-report" onclick="showSection('report')">📋 Report</button>
   </div>
   <button class="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
@@ -451,6 +452,126 @@ tbody tr:hover{background:var(--bg)}
   </div>
 </div>
 
+<!-- ENDING EXTENSION SECTION -->
+<div id="section-ending" style="display:none">
+
+  <!-- Step 1: Upload -->
+  <div class="card">
+    <div class="section-label">1 — ارفع ملف الشيفتات</div>
+    <div class="drop-zone" id="ee-drop" onclick="document.getElementById('ee-file-input').click()"
+      ondragover="event.preventDefault();this.classList.add('hover')"
+      ondragleave="this.classList.remove('hover')"
+      ondrop="event.preventDefault();this.classList.remove('hover');eeLoadFile(event.dataTransfer.files[0])">
+      <span class="drop-icon">📂</span>
+      <span id="ee-drop-label">اسحب ملف CSV أو Excel هنا، أو اضغط للاختيار</span>
+    </div>
+    <input type="file" id="ee-file-input" accept=".csv,.xlsx,.xls" style="position:absolute;opacity:0;pointer-events:none" onchange="eeLoadFile(this.files[0])">
+  </div>
+
+  <!-- Step 2: Settings -->
+  <div class="card" id="ee-settings" style="display:none">
+    <div class="section-label">2 — الإعدادات</div>
+    <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:flex-start">
+
+      <!-- SP dropdown -->
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">النقاط</div>
+        <div style="position:relative" id="ee-sp-wrapper">
+          <div id="ee-sp-trigger" onclick="eeToggleSPDrop()"
+            style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);cursor:pointer;font-size:13px;min-width:200px">
+            <span id="ee-sp-label">اختار النقاط</span>
+            <span style="color:var(--text-muted)">▾</span>
+          </div>
+          <div id="ee-sp-drop" onclick="event.stopPropagation()" style="display:none;position:absolute;top:100%;right:0;left:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:200;min-width:220px;margin-top:4px">
+            <div style="padding:8px">
+              <input type="text" id="ee-sp-search" placeholder="🔍 بحث..." oninput="eeFilterSPs()"
+                style="width:100%;padding:6px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:13px;outline:none">
+            </div>
+            <div style="padding:4px 8px;display:flex;gap:8px">
+              <button onclick="eeSelectAllSPs(true)" style="font-size:11px;background:none;border:none;color:var(--accent-text);cursor:pointer">تحديد الكل</button>
+              <button onclick="eeSelectAllSPs(false)" style="font-size:11px;background:none;border:none;color:var(--text-muted);cursor:pointer">إلغاء الكل</button>
+            </div>
+            <div id="ee-sp-options" style="max-height:200px;overflow-y:auto;padding:4px 0"></div>
+          </div>
+        </div>
+        <div id="ee-sp-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px"></div>
+      </div>
+
+      <!-- Time window -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">نافذة وقت الإنهاء</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="text" id="ee-from" value="11:00" placeholder="مثال: 23:30" maxlength="5"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;width:90px;text-align:center;direction:ltr">
+          <span style="color:var(--text-muted);font-size:13px">لـ</span>
+          <input type="text" id="ee-to" value="11:30" placeholder="مثال: 23:30" maxlength="5"
+            style="padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;width:90px;text-align:center;direction:ltr">
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">فورمات 24 ساعة — مثال: 09:00 أو 23:30</div>
+      </div>
+
+      <!-- Extension amount -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">مدة الزيادة</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="ee-hours" min="0" max="12" value="0" placeholder="ساعات"
+            style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;text-align:center">
+          <span style="color:var(--text-muted);font-size:13px">ساعة</span>
+          <input type="number" id="ee-mins" min="0" max="59" step="15" value="30" placeholder="دقايق"
+            style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;text-align:center">
+          <span style="color:var(--text-muted);font-size:13px">دقيقة</span>
+        </div>
+      </div>
+
+      <!-- Max duration filter -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:8px">حد الساعات</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="number" id="ee-max-dur" min="0" max="24" step="0.5" placeholder="—"
+            style="width:80px;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);color:var(--text-primary);font-size:14px;outline:none;text-align:center">
+          <span style="color:var(--text-muted);font-size:13px">ساعة</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">من شغل كده أو أكتر ميطلعش</div>
+      </div>
+
+    </div>
+
+    <div id="ee-err" style="display:none;color:var(--danger-text);font-size:13px;margin-top:12px;padding:8px 12px;background:var(--danger-bg);border-radius:var(--radius)"></div>
+    <button class="run-btn" onclick="eeRun()" style="margin-top:16px">▶ توليد</button>
+  </div>
+  </div>
+
+  <!-- Results -->
+  <div id="ee-results" style="display:none">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div>
+          <span style="font-size:14px;font-weight:600">النتيجة</span>
+          <span class="badge badge-a" id="ee-count-badge" style="margin-right:8px"></span>
+        </div>
+        <button class="exp-btn" onclick="eeExport()">⬇ تحميل CSV</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table dir="ltr" style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">SHIFT_ID</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">ADJUSTMENT_TYPE</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">EMPLOYEE_ID</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">STARTING_POINT_ID</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">START_DATE</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">END_DATE</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">START_TIME (LOCAL)</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">END_TIME (LOCAL)</th>
+            <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--text-muted);border-bottom:1px solid var(--border)">SHIFT_SLOTS</th>
+          </tr></thead>
+          <tbody id="ee-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end section-ending -->
+
 <!-- REPORT SECTION -->
 <div id="section-report" style="display:none">
 
@@ -667,8 +788,8 @@ function filterGrpDD(idx){
 
 document.addEventListener('click',e=>{
   if(!e.target.closest('.dropdown-wrap')){
-    document.getElementById('dd-menu').classList.remove('open');
-    document.getElementById('dd-trigger').classList.remove('open');
+    document.getElementById('dd-menu')?.classList.remove('open');
+    document.getElementById('dd-trigger')?.classList.remove('open');
   }
 });
 function renderDDItems(){
@@ -1392,11 +1513,11 @@ function renderScGroups(){
 }
 
 function showSection(name){
-  ['analyzer','creator','requests','report'].forEach(s=>{
+  ['analyzer','creator','requests','ending','report'].forEach(s=>{
     const el=document.getElementById('section-'+s);
     if(el) el.style.display=name===s?'block':'none';
   });
-  ['analyzer','creator','requests','report'].forEach(s=>{
+  ['analyzer','creator','requests','ending','report'].forEach(s=>{
     const btn=document.getElementById('nav-'+s);
     if(btn) btn.style.cssText=name===s?'background:var(--accent-bg);color:var(--accent-text);border-color:var(--accent-border)':'';
   });
@@ -2367,6 +2488,255 @@ function _renderReport() {
   });
 
   document.getElementById('rpt-status').textContent = 'آخر تحديث: ' + new Date().toLocaleTimeString('en-GB');
+}
+
+
+
+// ── Ending Extension ──
+let eeRows = [], eeAllSPs = [], eeOutputRows = [];
+let eeSelectedSPs = new Set();
+
+function eeToggleSPDrop() {
+  const drop = document.getElementById('ee-sp-drop');
+  const isOpen = drop.style.display !== 'none';
+  drop.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) setTimeout(() => document.getElementById('ee-sp-search').focus(), 50);
+}
+document.addEventListener('click', e => {
+  const wrapper = document.getElementById('ee-sp-wrapper');
+  const drop = document.getElementById('ee-sp-drop');
+  if (!drop || !wrapper) return;
+  // فقط لو الكليك بره الـ wrapper خالص يقفل
+  if (!wrapper.contains(e.target)) drop.style.display = 'none';
+});
+function eeRenderSPOptions(filter) {
+  const opts = document.getElementById('ee-sp-options');
+  const idToName = window._eeIdToName || {};
+  const filtered = eeAllSPs.filter(sp => {
+    const name = idToName[sp] || sp;
+    return name.toLowerCase().includes(filter.toLowerCase()) || sp.toLowerCase().includes(filter.toLowerCase());
+  });
+  opts.innerHTML = filtered.map(sp => {
+    const name = idToName[sp] || sp;
+    const checked = eeSelectedSPs.has(sp);
+    return `<div onclick="eeToggleSP('${sp}')" style="display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;border-radius:4px" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background=''">
+      <span style="width:14px;height:14px;border:1.5px solid var(--border);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;background:${checked?'var(--accent)':'transparent'};border-color:${checked?'var(--accent)':'var(--border)'}">
+        ${checked?'<span style="color:#fff">✓</span>':''}
+      </span>${name}</div>`;
+  }).join('');
+}
+function eeToggleSP(sp) {
+  if (eeSelectedSPs.has(sp)) eeSelectedSPs.delete(sp); else eeSelectedSPs.add(sp);
+  eeRenderSPOptions(document.getElementById('ee-sp-search').value);
+  eeUpdateSPTrigger();
+  // keep dropdown open
+  document.getElementById('ee-sp-drop').style.display = 'block';
+}
+function eeSelectAllSPs(selectAll) {
+  if (selectAll) eeAllSPs.forEach(sp => eeSelectedSPs.add(sp)); else eeSelectedSPs.clear();
+  eeRenderSPOptions(document.getElementById('ee-sp-search').value);
+  eeUpdateSPTrigger();
+}
+function eeFilterSPs() { eeRenderSPOptions(document.getElementById('ee-sp-search').value); }
+function eeUpdateSPTrigger() {
+  const label   = document.getElementById('ee-sp-label');
+  const tags    = document.getElementById('ee-sp-tags');
+  const idToName = window._eeIdToName || {};
+  const count   = eeSelectedSPs.size;
+  if (count === 0) { label.textContent = 'اختار النقاط'; tags.innerHTML = ''; }
+  else if (count === eeAllSPs.length) { label.textContent = 'كل النقاط (' + count + ')'; tags.innerHTML = ''; }
+  else {
+    label.textContent = count + ' نقطة مختارة';
+    tags.innerHTML = [...eeSelectedSPs].map(sp => {
+      const name = idToName[sp] || sp;
+      return `<span style="background:var(--accent-bg);color:var(--accent-text);border:1px solid var(--accent-border);border-radius:20px;padding:2px 10px;font-size:11px;display:flex;align-items:center;gap:4px">${name} <span onclick="eeToggleSP('${sp}')" style="cursor:pointer;font-size:10px">✕</span></span>`;
+    }).join('');
+  }
+}
+
+function eeLoadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const wb   = XLSX.read(ev.target.result, {type:'array'});
+      const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {defval:''});
+      if (!data.length) { alert('الملف فاضي'); return; }
+      eeRows = data;
+
+      // same col detection as bulk extensions
+      const cols     = Object.keys(data[0]);
+      const spIdCol  = cols.find(c => /starting.?point.?id/i.test(c));
+      const spNameCol= cols.find(c => /starting.?point/i.test(c) && c !== spIdCol);
+
+      const spSet = new Set();
+      const idToName = {};
+      data.forEach(r => {
+        const sp = String(r[spIdCol]||'').trim();
+        if (!sp) return;
+        spSet.add(sp);
+        const name = String(r[spNameCol]||'').trim();
+        if (name) idToName[sp] = name;
+      });
+
+      window._eeIdToName  = idToName;
+      window._eeSpIdCol   = spIdCol;
+      window._eeSpNameCol = spNameCol;
+      window._eeCols      = cols;
+
+      eeAllSPs = [...spSet].sort((a,b)=>(idToName[a]||a).localeCompare(idToName[b]||b));
+      eeSelectedSPs = new Set(eeAllSPs);
+      eeRenderSPOptions('');
+      eeUpdateSPTrigger();
+
+      document.getElementById('ee-drop-label').textContent = '✅ ' + file.name + ' — ' + data.length + ' شيفت';
+      document.getElementById('ee-drop').className = 'drop-zone loaded';
+      document.getElementById('ee-settings').style.display = 'block';
+      document.getElementById('ee-results').style.display  = 'none';
+      document.getElementById('ee-err').style.display      = 'none';
+    } catch(err) { alert('خطأ: ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function eeShowErr(msg) {
+  const el = document.getElementById('ee-err');
+  el.textContent = msg; el.style.display = msg ? 'block' : 'none';
+}
+
+function eeRun() {
+  eeShowErr('');
+  if (!eeRows.length) { eeShowErr('ارفع الملف الأول'); return; }
+  if (!eeSelectedSPs.size) { eeShowErr('اختار نقطة واحدة على الأقل'); return; }
+
+  // parse time window
+  const fromT = document.getElementById('ee-from').value.trim();
+  const toT   = document.getElementById('ee-to').value.trim();
+  const timeRx = /^([01]?\d|2[0-3]):([0-5]\d)$/;
+  if (!fromT || !toT) { eeShowErr('حدد نافذة الوقت'); return; }
+  if (!timeRx.test(fromT)) { eeShowErr('وقت البداية غلط — مثال: 09:00'); return; }
+  if (!timeRx.test(toT))   { eeShowErr('وقت النهاية غلط — مثال: 23:30'); return; }
+  const fromSec = parseSec(fromT + ':00');
+  const toSec   = parseSec(toT   + ':00');
+
+  const addHours = parseInt(document.getElementById('ee-hours').value) || 0;
+  const addMins  = parseInt(document.getElementById('ee-mins').value)  || 0;
+  const addSec   = addHours * 3600 + addMins * 60;
+  if (addSec <= 0) { eeShowErr('حدد مدة الزيادة'); return; }
+
+  // column detection — exact names from file
+  const cols     = window._eeCols || Object.keys(eeRows[0] || {});
+  const norm     = s => s.toLowerCase().replace(/[\s_\-()]/g,'');
+  const spIdCol  = window._eeSpIdCol   || cols.find(c => /starting.?point.?id/i.test(c));
+  const spNameCol= window._eeSpNameCol || cols.find(c => /starting.?point/i.test(c) && c !== spIdCol);
+  const idCol    = cols.find(c => norm(c)==='employeeid');
+  const shiftCol = cols.find(c => norm(c)==='shiftid');
+  const sDCol    = cols.find(c => norm(c)==='plannedstartdate');
+  const eDCol    = cols.find(c => norm(c)==='plannedenddate');
+  const sTCol    = cols.find(c => norm(c)==='plannedstarttime');
+  const eTCol    = cols.find(c => norm(c)==='plannedendtime');
+  const idToName = window._eeIdToName || {};
+  const maxDurInput = parseFloat(document.getElementById('ee-max-dur')?.value);
+  const maxDurSec   = isNaN(maxDurInput) ? null : maxDurInput * 3600;
+  const durCol      = cols.find(c => norm(c).includes('duration'));
+
+
+  eeOutputRows = [];
+  const seenShiftIds = new Set();
+  const tbody = document.getElementById('ee-tbody');
+  tbody.innerHTML = '';
+
+  eeRows.forEach(r => {
+    const sp       = String(r[spIdCol]   || '').trim();
+    const spName   = String(r[spNameCol] || idToName[sp] || sp).trim();
+    if (!eeSelectedSPs.has(sp)) return;
+
+    const empId    = String(r[idCol]    || '').trim();
+    const shiftId  = String(r[shiftCol] || '').trim();
+    if (shiftId && seenShiftIds.has(shiftId)) return;
+    if (shiftId) seenShiftIds.add(shiftId);
+    const startDate= fmtDate(r[sDCol]);
+    const endDate  = fmtDate(r[eDCol]);
+    const startTSec= parseSec(r[sTCol]);
+    const endTSec  = parseSec(r[eTCol]);
+    if (endTSec === null || startTSec === null) return;
+
+    // max duration filter
+    if (maxDurSec !== null && durCol) {
+      const dur = parseSec(r[durCol]);
+      if (dur !== null && dur >= maxDurSec) return;
+    }
+
+    const startTStr = toHHMM(startTSec);
+    // handle overnight: if end < start, end is next day
+    const endNorm = ((endTSec % 86400) + 86400) % 86400;
+    const isOvernight = endNorm < (startTSec % 86400);
+    const endAbsSec = endNorm + (isOvernight ? 86400 : 0);
+
+    // check window against actual end time (normalized 0-86400)
+    let inWindow = false;
+    if (fromSec <= toSec) {
+      inWindow = endNorm >= fromSec && endNorm <= toSec;
+    } else {
+      inWindow = endNorm >= fromSec || endNorm <= toSec;
+    }
+    if (!inWindow) return;
+
+    // new end = endNorm + extension
+    const newEndSec   = endNorm + addSec;
+    const newEndNorm  = newEndSec % 86400;
+    const daysCrossed = Math.floor(newEndSec / 86400) + (isOvernight ? 1 : 0);
+    let newEndDate = endDate || startDate;
+    if (daysCrossed > 0 && newEndDate) {
+      const base = new Date(newEndDate + 'T00:00:00Z');
+      if (!isNaN(base)) { base.setUTCDate(base.getUTCDate() + daysCrossed); newEndDate = base.toISOString().slice(0,10); }
+    }
+    const finalEndStr = toHHMM(newEndNorm);
+
+    eeOutputRows.push({
+      shift_id: shiftId,
+      adjustment_type: 'UPDATE',
+      employee_id: empId,
+      starting_point_id: sp,
+      start_date: startDate,
+      end_date: newEndDate,
+      'start_time (local)': startTStr,
+      'end_time (local)': finalEndStr,
+      shift_slots: ''
+    });
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${shiftId}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">UPDATE</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${empId}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${sp}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${startDate}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${newEndDate}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${startTStr}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border);color:var(--success-text);font-weight:600">${finalEndStr}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid var(--border)"></td>`;
+    tbody.appendChild(tr);
+  });
+
+  if (!eeOutputRows.length) {
+    eeShowErr('مفيش شيفتات بتقفل في النافذة دي للنقاط المختارة');
+    return;
+  }
+  document.getElementById('ee-count-badge').textContent = eeOutputRows.length + ' شيفت';
+  document.getElementById('ee-results').style.display = 'block';
+}
+
+function eeExport() {
+  if (!eeOutputRows.length) return;
+  const hdrs = ['shift_id','adjustment_type','employee_id','starting_point_id','start_date','end_date','start_time (local)','end_time (local)','shift_slots'];
+  const data = [hdrs, ...eeOutputRows.map(r => hdrs.map(h => r[h] ?? ''))];
+  const csv  = data.map(row => row.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ending_extension_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
 }
 
 
